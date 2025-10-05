@@ -90,8 +90,23 @@ end
 
 # Example usage (comment out in production)
 df = load_timeseries("../data/example.xlsx")
-display(plot_gas_exchange(df))
-display(plot_activity(df))
-display(plot_environment(df))
+
+# ensure graph directory exists
+isdir("../graph") || mkpath("../graph")
+
+# generate plots
+plt1 = plot_gas_exchange(df)
+plt2 = plot_activity(df)
+plt3 = plot_environment(df)
+
+# display interactively
+display(plt1)
+display(plt2)
+display(plt3)
+
+# save to files
+savefig(plt1, "../graph/gas_exchange.png")
+savefig(plt2, "../graph/activity.png")
+savefig(plt3, "../graph/environment.png")
 
 ###################################################################################################
