@@ -66,8 +66,9 @@ end
 ###################################################################################################
 
 # Example usage (comment out in production)
-# df = load_timeseries("../data/example.xlsx")
-# display(plot_gas_exchange(df))
-# display(plot_activity(df))
-# display(plot_environment(df))
+df = load_timeseries("../data/example.xlsx")
+display(plot_gas_exchange(df))
+display(plot_activity(df))
+display(plot_environment(df))
+
 ###################################################################################################
