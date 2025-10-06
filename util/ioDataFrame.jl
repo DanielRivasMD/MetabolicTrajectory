@@ -24,7 +24,7 @@ function readxlsx(path; sheetname::AbstractString = "TimeSeries")
 
   # extract header row and data block
   header = vec(sheet[1, :]) |> collect
-  data   = sheet[2:end, :] |> collect
+  data = sheet[2:end, :] |> collect
 
   df = DataFrame(data, Symbol.(header))  # use symbols for column names
   return df
