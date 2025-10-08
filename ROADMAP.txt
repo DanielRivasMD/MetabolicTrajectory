@@ -1,0 +1,8 @@
+- initial statistical analysis
+- calculate dynamic time warping
+- multivariate time series analysis => multivariate ARIMA, VAR, state‑space models, RNNs
+- time series encoding => linear |> PCA; non-linear |> AE
+- encode into high-dimensional time series => feature engineering; visualization => t-SNE & UMAP
+- spectral frecuency domian => FFT
+- autocorrelation
+- simulate waves for dtw
