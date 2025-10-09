@@ -1,34 +1,28 @@
 ####################################################################################################
 
+using DataFrames, Dates
+
+####################################################################################################
+
 "load and prepare the TimeSeries dataframe"
 function load_timeseries(path::AbstractString)
   df = readxlsx(path, sheetname = "TimeSeries")
 
-  # normalize any 1-column matrices into vectors
-  for c in names(df)
-    if df[!, c] isa AbstractMatrix
-      df[!, c] = vec(df[!, c])
-    end
-  end
+  df.DateTime = DateTime.(df.DateTime, dateformat"yyyy/mm/dd HH:MM:SS")
 
-  # replace "." with missing and convert to Float64 where possible
   for c in names(df)
-    if eltype(df[!, c]) == Any
-      df[!, c] = replace(df[!, c], "." => missing)
-      try
-        df[!, c] = Float64.(df[!, c])
-      catch
-        # skip if conversion fails (e.g. non-numeric column like :Animal)
-      end
-    end
-  end
+    col = df[!, c]
 
-  # ensure DateTime column is parsed
-  if :DateTime in names(df)
-    try
-      df.DateTime = DateTime.(df.DateTime, dateformat"yyyy-mm-dd HH:MM:SS")
-    catch
-      df.DateTime = DateTime.(string.(df.DateTime))
+    if c == :Animal
+      df[!, c] = string.(col)
+
+      # other string‑typed columns: try to coerce to Float64 with missing
+    elseif eltype(col) <: AbstractString
+      df[!, c] = map(x -> x == "." ? missing : tryparse(Float64, x), col)
+
+      # Any‑typed columns: attempt the same
+    elseif eltype(col) == Any
+      df[!, c] = map(x -> x == "." ? missing : tryparse(Float64, string(x)), col)
     end
   end
 
