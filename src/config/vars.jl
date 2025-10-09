@@ -21,6 +21,8 @@ const KO_WT_file = joinpath(
   "ffl_2023-06-27_11_15_ko_wt_female_macro_OneClickMacroV.2.53.1-slice30mins.mac_1.xlsx",
 )
 
+exclude_vars = ["DateTime", "DurationMin", "Animal"]
+
 end
 
 ####################################################################################################
