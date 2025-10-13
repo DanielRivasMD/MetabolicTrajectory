@@ -1,5 +1,6 @@
 - initial statistical analysis
-- calculate dynamic time warping
+- calculate dynamic time warping => section records into parts & capture local profile
+- implement graph analysis => fully connected graph -> pruned graph
 - multivariate time series analysis => multivariate ARIMA, VAR, state‑space models, RNNs
 - time series encoding => linear |> PCA; non-linear |> AE
 - encode into high-dimensional time series => feature engineering; visualization => t-SNE & UMAP
