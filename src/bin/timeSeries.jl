@@ -6,7 +6,7 @@
 
 # load config
 begin
-  include(joinpath("src", "config", "paths.jl"))
+  include(joinpath("..", "config", "paths.jl"))
   using .Paths
   Paths.ensure_dirs()
 
@@ -43,7 +43,6 @@ for v in vars
   plt = scatter_by_animal(df, Symbol(v))
   display(plt)
 end
-
 
 ###################################################################################################
 

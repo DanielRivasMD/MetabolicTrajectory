@@ -2,7 +2,7 @@
 
 module Paths
 
-"Project root: either fixed absolute path or detected from pwd()"
+"Project root"
 const PROJECT = normpath(joinpath(@__DIR__, "..", ".."))
 
 "Data"
