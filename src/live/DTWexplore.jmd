@@ -1,17 +1,15 @@
 ---
-title: "Sine & Cosine Waves — Distance Analysis"
+title: "Dynamic Time Warping exploration"
 author: "Daniel Rivas"
 date: October 13th
 ---
 
-# Title: Sine and Cosine Plot with Distance Metrics
-
 # Description
 Simulate signales & compare them using Euclidean distance & Dynamic Time Warping (DTW)
 
-Observe how two sine & cosine behave
-Dynamic Time Warping is calculate by taking each step on the signal and creating a cost matrix as indicated on the heatmap
-This permits to calculate similarity between two sequences
+Observe how two sine & cosine behave.
+DTW is calculate by taking each step on the signal & creating a cost matrix as indicated on the heatmap.
+This permits to calculate similarity between two sequences.
 
 ```julia
 using Plots
@@ -54,8 +52,8 @@ println("Euclidean distance: ", evaluate(Euclidean(), y_sin, y_cos))
 println("DTW cost: ", cost)
 ```
 
-Observe how two random sequences interact
-By adding a tremendous amount of noise, the sginal pattern is blurred & the cost becomes uninformative
+Observe how two random sequences interact.
+By adding a tremendous amount of noise, the sginal pattern is blurred & the cost becomes uninformative.
 
 ```julia
 using Random
@@ -106,7 +104,7 @@ println("Euclidean distance (seq1 vs seq2): ", evaluate(Euclidean(), seq1, seq2)
 println("DTW cost (seq1 vs seq2): ", cost_rand)
 ```
 
-By introducing low grade noise over sinusoid patterns, DTW is able to estimate sequence similarity accurately
+By introducing low grade noise over sinusoid patterns, DTW is able to estimate sequence similarity accurately.
 
 ```julia
 using Random
@@ -159,8 +157,8 @@ println("Euclidean distance (noisy sin vs noisy cos): ",
 println("DTW cost (noisy sin vs noisy cos): ", cost_noisy)
 ```
 
-The cumulative cost of DTW is calculated taking into account the diagonal strip from the cost matrix
-Constraing the radius parameter can severely impact the calculation, with low values being retrictive & high values being permissive
+The cumulative cost of DTW is calculated taking into account the diagonal strip from the cost matrix.
+Constraing the radius parameter can severely impact the calculation, with low values being retrictive & high values being permissive.
 
 ```julia
 using Random
@@ -256,7 +254,7 @@ display(plot(plots...; layout=(2,3), size=(1000,600)))
 
 ```
 
-DTW allows comparing signals of different lengths, however this will also have an effect on the cost, which can be middly alliviated by normalization
+DTW allows comparing signals of different lengths, however this will also have an effect on the cost, which can be middly alliviated by normalization.
 
 ```julia
 using Plots, Distances, DynamicAxisWarping, Statistics
