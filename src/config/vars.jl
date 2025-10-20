@@ -23,6 +23,18 @@ const KO_WT_file = joinpath(
 
 exclude_vars = ["DateTime", "DurationMin", "Animal"]
 
+
+####################################################################################################
+
+const COHORT1_0120 = joinpath(Paths.HMGCR_TAM,"cohort1_2025_01_20_male.xlsx")
+const COHORT1_0131 = joinpath(Paths.HMGCR_TAM,"cohort1_2025_01_31_male.xlsx")
+const COHORT2_0306 = joinpath(Paths.HMGCR_TAM,"cohort2_2025-03-06_male.xlsx")
+const COHORT2_0314 = joinpath(Paths.HMGCR_TAM,"cohort2_2025_03_14_12_male.xlsx")
+const COHORT3_0321 = joinpath(Paths.HMGCR_TAM,"cohort3_2025_03_21_female.xlsx")
+const COHORT4_0430 = joinpath(Paths.HMGCR_TAM,"cohort4_2025_04_30_female.xlsx")
+const COHORT5_0522 = joinpath(Paths.HMGCR_TAM,"cohort5_2025_05_22_male.xlsx")
+const COHORT6_0529 = joinpath(Paths.HMGCR_TAM,"cohort5_2025-05-29_male.xlsx")
+
 end
 
 ####################################################################################################
