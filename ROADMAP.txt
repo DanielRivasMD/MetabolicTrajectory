@@ -7,3 +7,7 @@
 - spectral frecuency domian => FFT
 - autocorrelation
 - simulate waves for dtw
+
+- parse animal group from all xlsx files
+- reconsider using notebooks heavily
+- perform clustering on dtw matrices
