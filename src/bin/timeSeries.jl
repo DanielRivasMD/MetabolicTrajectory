@@ -4,12 +4,13 @@
 # Visualization of metabolic time series data
 ###################################################################################################
 
-# load config
 begin
-  include(joinpath("..", "config", "paths.jl"))
+  # Load path definitions
+  include(joinpath(PROGRAM_FILE === nothing ? "src" : "..", "config", "paths.jl"))
   using .Paths
   Paths.ensure_dirs()
 
+  # Load configuration structs
   include(joinpath(Paths.CONFIG, "vars.jl"))
   include(joinpath(Paths.UTIL, "ioDataFrame.jl"))
   include(joinpath(Paths.UTIL, "ioLoadXLSX.jl"))

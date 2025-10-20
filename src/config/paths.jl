@@ -2,21 +2,25 @@
 
 module Paths
 
-"Project root"
+"project"
 const PROJECT = normpath(joinpath(@__DIR__, "..", ".."))
 
-"Data"
+"data"
 const DATA = joinpath(PROJECT, "data")
+const CSV = joinpath(DATA, "csv")
+const HMGCR = joinpath(DATA, "HMGCR_TAM")
 const XLSX = joinpath(DATA, "xlsx")
 
-"Graph"
+"graph"
 const GRAPH = joinpath(PROJECT, "graph")
+const HTML = joinpath(GRAPH, "html")
 
-"Source"
+"src"
 const SRC = joinpath(PROJECT, "src")
-const CONFIG = joinpath(SRC, "config")
-const UTIL = joinpath(SRC, "util")
 const BIN = joinpath(SRC, "bin")
+const CONFIG = joinpath(SRC, "config")
+const LIVE = joinpath(SRC, "live")
+const UTIL = joinpath(SRC, "util")
 
 "Ensure directories exist (for outputs)"
 function ensure_dirs()
