@@ -1,0 +1,25 @@
+---
+title: "Metabolic Trajectories Analysis"
+author: "Daniel Rivas"
+date: October 13th
+---
+
+# Description
+Extract signal patterns from metabolic trajectories by Dynamic Time Warping (DTW)
+
+Load data & dependencies
+
+```julia; echo = false, results = "hidden"
+include("saturatedSubsampling/pkg.jl")
+```
+
+
+DTW analysis and clustering loop
+For each variable of interest, we:
+1. Subsample each animal’s signal into many short segments (to capture variability).
+2. Compute a pairwise DTW cost matrix between all subsamples, normalized by length.
+3. Perform hierarchical clustering on the DTW distances.
+4. Visualize the clustered cost matrix as a heatmap to reveal structure in the signals.
+```julia; echo = false
+include("saturatedSubsampling/ck1.jl")
+```

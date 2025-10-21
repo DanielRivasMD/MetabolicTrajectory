@@ -1,49 +1,4 @@
----
-title: "Metabolic Trajectories Analysis"
-author: "Daniel Rivas"
-date: October 13th
----
-
-# Description
-Extract signal patterns from metabolic trajectories by Dynamic Time Warping (DTW)
-
-Load data & dependencies
-
-```julia
-begin
-    include(joinpath("..", "config", "paths.jl"))
-    Paths.ensure_dirs()
-
-    include(joinpath(Paths.CONFIG, "vars.jl"))
-    include(joinpath(Paths.UTIL, "ioDataFrame.jl"))
-    include(joinpath(Paths.UTIL, "ioLoadXLSX.jl"))
-end;
-
-begin
-    using DataFrames
-    using Dates
-    using Plots
-    using DynamicAxisWarping
-    using Statistics
-    using Random
-end;
-
-begin
-    df = load_timeseries(Vars.SIG1R_HT_file)
-
-    # Group by subject
-    gdf = groupby(df, :Animal)
-
-    # Variables
-    vars = setdiff(names(df), Vars.exclude_vars)
-end;
-```
-
-
-```julia
-using Random, Statistics, DataFrames, Plots, Distances, DynamicAxisWarping, Clustering
-
-for var in vars
+for var in vars[1:3]
     println("Processing variable: $var")
 
     # Collect subsamples and IDs
@@ -105,20 +60,5 @@ for var in vars
         yticks=false
     )
     display(plt)
-
-    # --- Compute and plot distribution of costs ---
-    # Flatten upper triangle (excluding diagonal)
-    vals = [cost_matrix[i,j] for i in 1:N for j in i+1:N]
-
-    plt_hist = histogram(vals;
-        bins=100,
-        xlabel="DTW Cost",
-        ylabel="Frequency",
-        title="Distribution of DTW Costs — $var",
-        xscale=:log10,   # optional: log scale if values span many orders of magnitude
-        legend=false,
-        size=(800,500)
-    )
-    display(plt_hist)
 end
-```
+
