@@ -7,310 +7,53 @@ date: October 13th
 # Description
 Simulate signales & compare them using Euclidean distance & Dynamic Time Warping (DTW)
 
-Observe how two sine & cosine behave.
-DTW is calculate by taking each step on the signal & creating a cost matrix as indicated on the heatmap.
-This permits to calculate similarity between two sequences.
-
-```julia
-using Plots
-using Distances
-using DynamicAxisWarping
-
-# Generate signals
-x = range(0, 5π; length=1000)
-y_sin = sin.(x)
-y_cos = cos.(x)
-
-# Compute DTW cost matrix
-D = dtw_cost_matrix(y_sin, y_cos, SqEuclidean())
-
-# Capture heatmap under a variable
-plt_heat = heatmap(D;
-    xlabel="sin(x) index",
-    ylabel="cos(x) index",
-    title="DTW Cost Matrix Heatmap",
-    colorbar_title="Cost"
-)
-
-# Explicitly display it
-display(plt_heat)
-
-# Alignment path overlay on original signals
-cost, i1, i2 = dtw(y_sin, y_cos, SqEuclidean())
-plt_align = plot(x, y_sin; label="sin(x)", color=:blue, lw=2)
-plot!(plt_align, x, y_cos; label="cos(x)", color=:red, lw=2)
-
-# Draw alignment lines for a subset
-for (idx_sin, idx_cos) in zip(i1[1:20:end], i2[1:20:end])
-    plot!(plt_align, [x[idx_sin], x[idx_cos]], [y_sin[idx_sin], y_cos[idx_cos]];
-          color=:gray, alpha=0.4, label=false)
-end
-
-display(plt_align)
-
-println("Euclidean distance: ", evaluate(Euclidean(), y_sin, y_cos))
-println("DTW cost: ", cost)
+```julia; echo = false
+include("DTWexplore/pkg.jl")
 ```
 
-Observe how two random sequences interact.
-By adding a tremendous amount of noise, the sginal pattern is blurred & the cost becomes uninformative.
+In this section we generate clean sine and cosine signals and compare them.
+We compute the DTW cost matrix, visualize it as a heatmap, and overlay the
+optimal alignment path on the original signals. This illustrates how DTW
+compensates for phase differences between two smooth periodic signals.
 
-```julia
-using Random
-using Plots
-using Distances
-using DynamicAxisWarping
-
-# 1) Seed RNG for reproducibility
-Random.seed!(1234)
-
-# 2) Generate two random sequences
-len = 200
-seq1 = randn(len)                  # random Gaussian noise
-seq2 = randn(len) .+ 0.5           # shifted random noise
-
-# Plot the raw sequences
-plt_seq = plot(seq1; label="seq1", color=:blue, lw=2)
-plot!(plt_seq, seq2; label="seq2", color=:red, lw=2, title="Random Sequences")
-display(plt_seq)
-
-# 3) Compute DTW cost matrix
-D_rand = dtw_cost_matrix(seq1, seq2, SqEuclidean())
-
-# 4a) Heatmap of cost matrix
-plt_heat_rand = heatmap(D_rand;
-    xlabel="seq1 index",
-    ylabel="seq2 index",
-    title="DTW Cost Matrix (Random Sequences)",
-    colorbar_title="Cost"
-)
-display(plt_heat_rand)
-
-# 4b) Alignment overlay on original signals
-cost_rand, i1_rand, i2_rand = dtw(seq1, seq2, SqEuclidean())
-
-plt_align_rand = plot(seq1; label="seq1", color=:blue, lw=2)
-plot!(plt_align_rand, seq2; label="seq2", color=:red, lw=2)
-
-# Draw alignment lines (subsampled for clarity)
-for (idx1, idx2) in zip(i1_rand[1:10:end], i2_rand[1:10:end])
-    plot!(plt_align_rand, [idx1, idx2], [seq1[idx1], seq2[idx2]];
-          color=:gray, alpha=0.4, label=false)
-end
-
-display(plt_align_rand)
-
-println("Euclidean distance (seq1 vs seq2): ", evaluate(Euclidean(), seq1, seq2))
-println("DTW cost (seq1 vs seq2): ", cost_rand)
+```julia; echo = false
+include("DTWexplore/ck1.jl")
 ```
 
-By introducing low grade noise over sinusoid patterns, DTW is able to estimate sequence similarity accurately.
+Here we generate two purely random sequences to show a contrasting case.
+With no underlying structure, both Euclidean distance and DTW cost are large
+and the alignment path is essentially meaningless. This demonstrates that DTW
+is only informative when signals share some temporal pattern.
 
-```julia
-using Random
-using Plots
-using Distances
-using DynamicAxisWarping
-
-# 1) Seed RNG
-Random.seed!(2025)
-
-# 2) Generate noisy sinusoidal signals
-x = range(0, 4π; length=400)
-signal1 = sin.(x) .+ 0.1 .* randn(length(x))   # sine + small noise
-signal2 = cos.(x) .+ 0.1 .* randn(length(x))   # cosine + small noise
-
-# Plot raw noisy signals
-plt_signals = plot(x, signal1; label="noisy sin(x)", color=:blue, lw=2)
-plot!(plt_signals, x, signal2; label="noisy cos(x)", color=:red, lw=2,
-      title="Noisy Sinusoidal Signals")
-display(plt_signals)
-
-# 3) Compute DTW cost matrix
-D_noisy = dtw_cost_matrix(signal1, signal2, SqEuclidean())
-
-# 4a) Heatmap of cost matrix
-plt_heat_noisy = heatmap(D_noisy;
-    xlabel="sin(x) index",
-    ylabel="cos(x) index",
-    title="DTW Cost Matrix (Noisy Sinusoids)",
-    colorbar_title="Cost"
-)
-display(plt_heat_noisy)
-
-# 4b) Alignment overlay on original signals
-cost_noisy, i1_noisy, i2_noisy = dtw(signal1, signal2, SqEuclidean())
-
-plt_align_noisy = plot(x, signal1; label="noisy sin(x)", color=:blue, lw=2)
-plot!(plt_align_noisy, x, signal2; label="noisy cos(x)", color=:red, lw=2)
-
-# Draw alignment lines (subsampled for clarity)
-for (idx1, idx2) in zip(i1_noisy[1:15:end], i2_noisy[1:15:end])
-    plot!(plt_align_noisy, [x[idx1], x[idx2]], [signal1[idx1], signal2[idx2]];
-          color=:gray, alpha=0.4, label=false)
-end
-
-display(plt_align_noisy)
-
-println("Euclidean distance (noisy sin vs noisy cos): ",
-        evaluate(Euclidean(), signal1, signal2))
-println("DTW cost (noisy sin vs noisy cos): ", cost_noisy)
+```julia; echo = false
+include("DTWexplore/ck2.jl")
 ```
 
-The cumulative cost of DTW is calculated taking into account the diagonal strip from the cost matrix.
-Constraing the radius parameter can severely impact the calculation, with low values being retrictive & high values being permissive.
+In this section we add low‑level Gaussian noise to sine and cosine signals.
+Despite the noise, DTW is able to recover a meaningful alignment path and
+produce a reasonable similarity measure, showing its robustness to noise.
 
-```julia
-using Random
-using Plots
-using Distances
-using DynamicAxisWarping
-
-# Seed RNG for reproducibility
-Random.seed!(2025)
-
-# Generate noisy sinusoidal signals
-x = range(0, 4π; length=400)
-signal1 = sin.(x) .+ 0.1 .* randn(length(x))
-signal2 = cos.(x) .+ 0.1 .* randn(length(x))
-
-# Plot raw signals
-plt_signals = plot(x, signal1; label="noisy sin(x)", color=:blue, lw=2)
-plot!(plt_signals, x, signal2; label="noisy cos(x)", color=:red, lw=2,
-      title="Noisy Sinusoidal Signals")
-display(plt_signals)
-
-# Define radii to test
-radii = [2, 5, 10, 15, 25, 50]
-
-# Collect results
-results = Dict{Int, Float64}()
-
-for r in radii
-    cost_r = dtw_cost(signal1, signal2, SqEuclidean(), r)
-    results[r] = cost_r
-    println("DTW cost with radius=$r: ", cost_r)
-end
-
-# For one example radius, also visualize cost matrix + alignment
-chosen_radius = 25
-D_r = dtw_cost_matrix(signal1, signal2, SqEuclidean())
-plt_heat = heatmap(D_r;
-    xlabel="sin(x) index",
-    ylabel="cos(x) index",
-    title="DTW Cost Matrix (radius=$chosen_radius)",
-    colorbar_title="Cost")
-display(plt_heat)
-
-cost_val, i1, i2 = dtw(signal1, signal2, SqEuclidean())
-plt_align = plot(x, signal1; label="noisy sin(x)", color=:blue, lw=2)
-plot!(plt_align, x, signal2; label="noisy cos(x)", color=:red, lw=2)
-for (idx1, idx2) in zip(i1[1:15:end], i2[1:15:end])
-    plot!(plt_align, [x[idx1], x[idx2]], [signal1[idx1], signal2[idx2]];
-          color=:gray, alpha=0.4, label=false)
-end
-display(plt_align)
-
-# Visualize cost vs radius
-plt_costs = plot(radii, [results[r] for r in radii];
-    seriestype=:scatter,
-    markersize=6,
-    xlabel="Radius",
-    ylabel="DTW Cost",
-    title="DTW Cost vs Radius (Noisy Sinusoids)",
-    label="DTW cost")
-plot!(plt_costs, radii, [results[r] for r in radii]; seriestype=:line, lw=2, label=false)
-display(plt_costs)
-
-using Random
-using Plots
-using Distances
-using DynamicAxisWarping
-
-Random.seed!(2025)
-
-x = range(0, 4π; length=400)
-signal1 = sin.(x) .+ 0.1 .* randn(length(x))
-signal2 = cos.(x) .+ 0.1 .* randn(length(x))
-
-radii = [2, 5, 10, 15, 25, 50]
-
-plots = Plots.Plot[]   # <-- fixed
-
-for r in radii
-    D_r = dtw_cost_matrix(signal1, signal2, SqEuclidean(),
-                          radiuslimits(r, length(signal1), length(signal2))...)
-
-    plt = heatmap(D_r;
-        xlabel="sin(x) index",
-        ylabel="cos(x) index",
-        title="DTW Cost Matrix (radius=$r)",
-        colorbar_title="Cost"
-    )
-    push!(plots, plt)
-end
-
-display(plot(plots...; layout=(2,3), size=(1000,600)))
-
+```julia; echo = false
+include("DTWexplore/ck3.jl")
 ```
 
-DTW allows comparing signals of different lengths, however this will also have an effect on the cost, which can be middly alliviated by normalization.
+Here we explore the Sakoe–Chiba radius parameter, which restricts how far
+the warping path can deviate from the diagonal of the cost matrix.
+We compute DTW costs for several radii, visualize the cost vs radius curve,
+and show how too‑small radii are overly restrictive while larger radii allow
+more flexible alignments.
 
-```julia
-using Plots, Distances, DynamicAxisWarping, Statistics
+```julia; echo = false
+include("DTWexplore/ck4.jl")
+include("DTWexplore/ck5.jl")
+```
 
-len_sin = 200
-x_sin = range(0, 2π; length=len_sin)
-y_sin = sin.(x_sin)
+Finally, we compare sine and cosine signals of different lengths.
+We show how raw DTW cost increases with sequence length mismatch,
+and how normalizing by average sequence length alleviates this bias.
+Heatmaps for the shortest and longest cases illustrate how DTW handles
+unequal lengths in practice.
 
-scales = 0.5:0.1:1.5
-cos_lengths = Int.(round.(len_sin .* scales))
-
-raw_costs = Float64[]
-norm_costs = Float64[]
-
-for len_cos in cos_lengths
-    x_cos = range(0, 2π; length=len_cos)
-    y_cos = cos.(x_cos)
-
-    # Use dtw, not dtw_cost (supports unequal lengths)
-    cost_val, i1, i2 = dtw(y_sin, y_cos, SqEuclidean())
-    push!(raw_costs, cost_val)
-
-    # Normalize by average sequence length
-    avg_len = mean([len_sin, len_cos])
-    push!(norm_costs, cost_val / avg_len)
-
-    # Show heatmaps for smallest and largest
-    if len_cos == minimum(cos_lengths) || len_cos == maximum(cos_lengths)
-        D = dtw_cost_matrix(y_sin, y_cos, SqEuclidean())
-        plt_heat = heatmap(D;
-            xlabel="sin(x) index",
-            ylabel="cos(x) index",
-            title="DTW Cost Matrix (cos length=$len_cos)",
-            colorbar_title="Cost"
-        )
-        display(plt_heat)
-    end
-end
-
-# Scatterplot of raw DTW cost vs cosine sequence length
-plt_raw = scatter(cos_lengths, raw_costs;
-    xlabel="Cosine sequence length",
-    ylabel="Raw DTW cost",
-    title="Raw DTW Cost vs Cosine Sequence Length",
-    markersize=6,
-    label="Raw DTW cost")
-plot!(plt_raw, cos_lengths, raw_costs; seriestype=:line, lw=2, label=false)
-display(plt_raw)
-
-# Scatterplot of normalized DTW cost vs cosine sequence length
-plt_norm = scatter(cos_lengths, norm_costs;
-    xlabel="Cosine sequence length",
-    ylabel="Normalized DTW cost",
-    title="Normalized DTW Cost vs Cosine Sequence Length",
-    markersize=6,
-    label="Normalized DTW cost")
-plot!(plt_norm, cos_lengths, norm_costs; seriestype=:line, lw=2, label=false)
-display(plt_norm)
+```julia; echo = false
+include("DTWexplore/ck6.jl")
 ```
