@@ -8,7 +8,7 @@ date: October 13th
 Simulate signales & compare them using Euclidean distance & Dynamic Time Warping (DTW)
 
 ```julia; echo = false
-include("DTWexplore/pkg.jl")
+include("exploreDTW/pkg.jl")
 ```
 
 In this section we generate clean sine and cosine signals and compare them.
@@ -17,7 +17,7 @@ optimal alignment path on the original signals. This illustrates how DTW
 compensates for phase differences between two smooth periodic signals.
 
 ```julia; echo = false
-include("DTWexplore/ck1.jl")
+include("exploreDTW/ck1.jl")
 ```
 
 Here we generate two purely random sequences to show a contrasting case.
@@ -26,7 +26,7 @@ and the alignment path is essentially meaningless. This demonstrates that DTW
 is only informative when signals share some temporal pattern.
 
 ```julia; echo = false
-include("DTWexplore/ck2.jl")
+include("exploreDTW/ck2.jl")
 ```
 
 In this section we add low‑level Gaussian noise to sine and cosine signals.
@@ -34,7 +34,7 @@ Despite the noise, DTW is able to recover a meaningful alignment path and
 produce a reasonable similarity measure, showing its robustness to noise.
 
 ```julia; echo = false
-include("DTWexplore/ck3.jl")
+include("exploreDTW/ck3.jl")
 ```
 
 Here we explore the Sakoe–Chiba radius parameter, which restricts how far
@@ -44,8 +44,8 @@ and show how too‑small radii are overly restrictive while larger radii allow
 more flexible alignments.
 
 ```julia; echo = false
-include("DTWexplore/ck4.jl")
-include("DTWexplore/ck5.jl")
+include("exploreDTW/ck4.jl")
+include("exploreDTW/ck5.jl")
 ```
 
 Finally, we compare sine and cosine signals of different lengths.
@@ -55,5 +55,5 @@ Heatmaps for the shortest and longest cases illustrate how DTW handles
 unequal lengths in practice.
 
 ```julia; echo = false
-include("DTWexplore/ck6.jl")
+include("exploreDTW/ck6.jl")
 ```
