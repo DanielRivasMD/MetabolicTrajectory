@@ -6,8 +6,10 @@
 - encode into high-dimensional time series => feature engineering; visualization => t-SNE & UMAP
 - spectral frecuency domian => FFT
 - autocorrelation
-- simulate waves for dtw
 
-- parse animal group from all xlsx files
+- justify the subsample experiment
+- compare the subsample experiment to simulated basic stat analysis
+- potential bug: subsampling percentualy might introduce bias on the costs, therefore select the longest signal in the group & fix the subsample length in relation to that one
+
 - reconsider using notebooks heavily
 - perform clustering on dtw matrices
