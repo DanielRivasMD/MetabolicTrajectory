@@ -1,0 +1,16 @@
+---
+title: "Clustering"
+author: "Daniel Rivas"
+date: October 22nd
+---
+
+# Description
+
+
+```julia; echo = false
+include("exploreClustering/ck1.jl")
+```
+
+```julia; echo = false
+include("exploreClustering/ck2.jl")
+```
