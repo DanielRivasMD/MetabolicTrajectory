@@ -1,5 +1,10 @@
 let
 
+using Distances
+using DynamicAxisWarping
+using Plots
+using Random
+
 Random.seed!(2025)
 
 x = range(0, 4π; length=400)

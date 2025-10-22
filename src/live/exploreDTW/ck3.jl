@@ -1,5 +1,10 @@
 let
 
+using Distances
+using DynamicAxisWarping
+using Plots
+using Random
+
 # 1) Seed RNG
 Random.seed!(2025)
 

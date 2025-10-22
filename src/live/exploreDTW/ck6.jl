@@ -1,5 +1,10 @@
 let
 
+using Distances
+using DynamicAxisWarping
+using Plots
+using Statistics
+
 len_sin = 200
 x_sin = range(0, 2π; length=len_sin)
 y_sin = sin.(x_sin)

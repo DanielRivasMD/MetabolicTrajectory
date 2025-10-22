@@ -1,5 +1,10 @@
 let
 
+using Distances
+using DynamicAxisWarping
+using Plots
+using Random
+
 # Seed RNG for reproducibility
 Random.seed!(2025)
 

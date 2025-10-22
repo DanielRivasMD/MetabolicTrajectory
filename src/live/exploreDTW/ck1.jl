@@ -1,5 +1,9 @@
 let
 
+using Distances
+using DynamicAxisWarping
+using Plots
+
 # Generate signals
 x = range(0, 5π; length=1000)
 y_sin = sin.(x)

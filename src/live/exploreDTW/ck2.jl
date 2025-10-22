@@ -1,5 +1,9 @@
 let
 
+using DynamicAxisWarping
+using Plots
+using Random
+
 # 1) Seed RNG for reproducibility
 Random.seed!(1234)
 

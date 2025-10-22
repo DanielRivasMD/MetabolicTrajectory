@@ -7,10 +7,6 @@ date: October 13th
 # Description
 Simulate signales & compare them using Euclidean distance & Dynamic Time Warping (DTW)
 
-```julia; echo = false
-include("exploreDTW/pkg.jl")
-```
-
 In this section we generate clean sine and cosine signals and compare them.
 We compute the DTW cost matrix, visualize it as a heatmap, and overlay the
 optimal alignment path on the original signals. This illustrates how DTW
