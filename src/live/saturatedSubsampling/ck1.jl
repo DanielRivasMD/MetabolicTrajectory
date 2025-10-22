@@ -1,7 +1,7 @@
 let
 
 # Load path definitions
-include(joinpath(PROGRAM_FILE === nothing ? "src" : "..", "..", "config", "paths.jl"))
+include(joinpath((pwd() == @__DIR__) ? "src" : "../..", "config", "paths.jl"))
 using .Paths
 Paths.ensure_dirs()
 
