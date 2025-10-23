@@ -44,32 +44,37 @@ vars = setdiff(names(df), Vars.exclude_vars)
 fs = 0.00056
 
 for v in vars
-    spectra = fft_by_animal(df, Symbol(v); fs=fs)
-    @info "FFT for $v"
-    for (animal, (freqs, mags)) in spectra
-        println("Animal $animal, variable $v, first 5 freqs: ", freqs[1:5])
-        println("Magnitudes: ", mags[1:5])
-    end
+  spectra = fft_by_animal(df, Symbol(v); fs = fs)
+  @info "FFT for $v"
+  for (animal, (freqs, mags)) in spectra
+    println("Animal $animal, variable $v, first 5 freqs: ", freqs[1:5])
+    println("Magnitudes: ", mags[1:5])
+  end
 end
 
 for v in vars
-    spectra = fft_by_animal(df, Symbol(v); fs=fs)
-    @info "FFT for $v"
+  spectra = fft_by_animal(df, Symbol(v); fs = fs)
+  @info "FFT for $v"
 
-    for (animal, (freqs, mags)) in spectra
-        # only keep the first half (positive frequencies)
-        N = length(freqs)
-        half = 1:div(N,2)
+  for (animal, (freqs, mags)) in spectra
+    # only keep the first half (positive frequencies)
+    N = length(freqs)
+    half = 1:div(N, 2)
 
-        f = freqs[half]
-        m = mags[half] ./ N   # normalize magnitude
+    f = freqs[half]
+    m = mags[half] ./ N   # normalize magnitude
 
-        println("Animal $animal, variable $v")
-        display(lineplot(f, m;
-                         xlabel="Frequency (Hz)",
-                         ylabel="Magnitude",
-                         title="FFT of $v (Animal $animal)"))
-    end
+    println("Animal $animal, variable $v")
+    display(
+      lineplot(
+        f,
+        m;
+        xlabel = "Frequency (Hz)",
+        ylabel = "Magnitude",
+        title = "FFT of $v (Animal $animal)",
+      ),
+    )
+  end
 end
 
 ####################################################################################################

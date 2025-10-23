@@ -34,9 +34,9 @@ end
 
 "write dataframe"
 function writedf(path, df::DataFrame; sep = ',')
-    header = permutedims(names(df))  # 1×N matrix of strings
-    data   = Matrix(df)
-    writedlm(path, vcat(header, data), sep)
+  header = permutedims(names(df))  # 1×N matrix of strings
+  data = Matrix(df)
+  writedlm(path, vcat(header, data), sep)
 end
 
 ###################################################################################################

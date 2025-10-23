@@ -7,13 +7,24 @@ using ..Paths
 # sigma experiment
 ####################################################################################################
 
-const SIG1R_HT_xlsx = joinpath(Paths.XLSX, "ffl_2023-06-14_11_59_sig1r_transcriptoms_hetero_male_female_macro_OneClickMacroV.2.53.1-slice30mins.mac_1.xlsx")
-const SIG1R_WT_xlsx = joinpath(Paths.XLSX, "ffl_2023-06-20_12_14_sig1r_transcriptoms_sigko_wt_male_macro_OneClickMacroV.2.53.1-slice30mins.mac_1.xlsx")
-const KO_WT_xlsx = joinpath(Paths.XLSX, "ffl_2023-06-27_11_15_ko_wt_female_macro_OneClickMacroV.2.53.1-slice30mins.mac_1.xlsx")
+const SIG1R_HT_xlsx = joinpath(
+  Paths.XLSX,
+  "ffl_2023-06-14_11_59_sig1r_transcriptoms_hetero_male_female_macro_OneClickMacroV.2.53.1-slice30mins.mac_1.xlsx",
+)
+const SIG1R_WT_xlsx = joinpath(
+  Paths.XLSX,
+  "ffl_2023-06-20_12_14_sig1r_transcriptoms_sigko_wt_male_macro_OneClickMacroV.2.53.1-slice30mins.mac_1.xlsx",
+)
+const KO_WT_xlsx = joinpath(
+  Paths.XLSX,
+  "ffl_2023-06-27_11_15_ko_wt_female_macro_OneClickMacroV.2.53.1-slice30mins.mac_1.xlsx",
+)
 xvars_xlsx = ["DateTime", "DurationMin", "Animal"]
 
-const SIG1R_HT_csv = joinpath(Paths.CSV, "FFL_2023-06-14_11_59_Sig1R_Transcriptoms_Hetero_Male_Female_rt.csv")
-const SIG1R_WT_csv = joinpath(Paths.CSV, "FFL_2023-06-20_12_14_Sig1R_Transcriptoms_SigKo_WT_Male_rt.csv")
+const SIG1R_HT_csv =
+  joinpath(Paths.CSV, "FFL_2023-06-14_11_59_Sig1R_Transcriptoms_Hetero_Male_Female_rt.csv")
+const SIG1R_WT_csv =
+  joinpath(Paths.CSV, "FFL_2023-06-20_12_14_Sig1R_Transcriptoms_SigKo_WT_Male_rt.csv")
 const KO_WT_csv = joinpath(Paths.CSV, "FFL_2023-06-27_11_15_KO_WT_FEMALE_rt.csv")
 xvars_csv = ["Date_Time"]
 

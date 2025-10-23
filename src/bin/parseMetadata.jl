@@ -18,8 +18,8 @@ end;
 
 # load packages
 begin
-    using DataFrames
-    using XLSX
+  using DataFrames
+  using XLSX
 end;
 
 ###################################################################################################
@@ -31,49 +31,51 @@ Open an XLSX file, read the "Metadata" sheet, and extract only the Group_* value
 Returns a DataFrame with columns: SourceFile, AnimalIndex, Group.
 """
 function extract_groups(path::String)
-    xf = XLSX.readxlsx(path)
-    sheet = xf["Metadata"]
+  xf = XLSX.readxlsx(path)
+  sheet = xf["Metadata"]
 
-    # Flatten sheet into vector of strings
-    rows = string.(vec(sheet[:]))
+  # Flatten sheet into vector of strings
+  rows = string.(vec(sheet[:]))
 
-    # Find block delimiters
-    start_idx = findfirst(contains("ANIMAL DATA REMARKS:"), rows)
-    end_idx   = findfirst(contains("USER REMARKS:"), rows)
+  # Find block delimiters
+  start_idx = findfirst(contains("ANIMAL DATA REMARKS:"), rows)
+  end_idx = findfirst(contains("USER REMARKS:"), rows)
 
-    if isnothing(start_idx) || isnothing(end_idx)
-        @warn "No metadata block found in $path"
-        return DataFrame(SourceFile=String[], AnimalIndex=Int[], Group=String[])
+  if isnothing(start_idx) || isnothing(end_idx)
+    @warn "No metadata block found in $path"
+    return DataFrame(SourceFile = String[], AnimalIndex = Int[], Group = String[])
+  end
+
+  block = rows[start_idx+1:end_idx-1]
+
+  groups = Union{String,Missing}[]
+  for line in block
+    tokens = split(line)
+    # look for "Group_*" keys and take the following token as value
+    for (i, tok) in enumerate(tokens)
+      if startswith(tok, "Group_") && i < length(tokens)
+        push!(groups, tokens[i+1])
+      end
     end
+  end
 
-    block = rows[start_idx+1:end_idx-1]
+  # Pad to 16 animals
+  while length(groups) < 16
+    push!(groups, missing)
+  end
 
-    groups = Union{String,Missing}[]
-    for line in block
-        tokens = split(line)
-        # look for "Group_*" keys and take the following token as value
-        for (i, tok) in enumerate(tokens)
-            if startswith(tok, "Group_") && i < length(tokens)
-                push!(groups, tokens[i+1])
-            end
-        end
-    end
-
-    # Pad to 16 animals
-    while length(groups) < 16
-        push!(groups, missing)
-    end
-
-    return DataFrame(SourceFile=fill(basename(path), 16),
-                     AnimalIndex=1:16,
-                     Group=groups)
+  return DataFrame(
+    SourceFile = fill(basename(path), 16),
+    AnimalIndex = 1:16,
+    Group = groups,
+  )
 end
 
 ###################################################################################################
 # Main driver
 ###################################################################################################
 
-files = filter(f -> endswith(f, ".xlsx"), readdir(Paths.HMGCR; join=true))
+files = filter(f -> endswith(f, ".xlsx"), readdir(Paths.HMGCR; join = true))
 
 all_animals = vcat([extract_groups(f) for f in files]...)
 

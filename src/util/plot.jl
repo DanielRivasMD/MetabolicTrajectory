@@ -100,5 +100,3 @@ function plot_environment(df::DataFrame)
   title!("Environmental Conditions by Animal")
   return plt
 end
-
-
