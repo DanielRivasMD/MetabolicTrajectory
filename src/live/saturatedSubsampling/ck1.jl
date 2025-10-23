@@ -21,35 +21,39 @@ let
   using UMAP
 
   # Load data
-  df = readdf(Vars.SIG1R_HT_csv)
-  for c in names(df)[2:end]
+  df = readdf(Vars.SIG1R_HT_csv; sep = ',')
+  vars = setdiff(names(df), Vars.xvars_csv)
+
+  for c in Vars.xvars_csv
+    df[!, c] = DateTime.(df[!, c], dateformat"mm/dd/yyyy HH:MM:SS")
+  end
+
+  for c in vars
     df[!, c] = Float64.(df[!, c])
   end
 
-
   # Group by subject
-  gdf = groupby(df, :Animal)
-
-  # Variables
-  vars = setdiff(names(df), Vars.xvars_csv)
+  subdfs = split_by_animal(df)
 
   for var in vars[1:3]
     println("Processing variable: $var")
+
+    # Normalize variable name (strip trailing _N if present)
+    basevar = Symbol(replace(var, r"_\d+$" => ""))
 
     # Collect subsamples and IDs
     all_subsamples = Vector{Vector{Float64}}()
     all_ids = String[]
 
-    for subdf in gdf
-      animal_id = Int(unique(subdf.Animal)[1])
-
+    # Iterate over dictionary entries
+    for (animal_id, subdf) in subdfs
       # Clean the signal: drop missing values
-      raw_signal = subdf[:, var]
+      raw_signal = subdf[!, basevar]
       signal = collect(skipmissing(raw_signal))
 
       n = length(signal)
       if n == 0
-        @warn "Animal $animal_id has no valid data for $var, skipping"
+        @warn "Animal $animal_id has no valid data for $basevar, skipping"
         continue
       end
 
@@ -72,7 +76,7 @@ let
     cost_matrix = zeros(Float64, N, N)
     for i = 1:N
       for j = i:N
-        cost, i1, i2 = dtw(all_subsamples[i], all_subsamples[j], SqEuclidean())
+        cost, _, _ = dtw(all_subsamples[i], all_subsamples[j], SqEuclidean())
         norm_cost = cost / mean([length(all_subsamples[i]), length(all_subsamples[j])])
         cost_matrix[i, j] = norm_cost
         cost_matrix[j, i] = norm_cost
@@ -84,10 +88,25 @@ let
     leaf_order = tree.order
     cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
 
+    # calcualte edges
+    edges_h = diff(cost_matrix; dims = 1)  # horizontal edges (row-to-row changes)
+    edges_v = diff(cost_matrix; dims = 2)  # vertical edges (col-to-col changes)
+
     # --- Plot clustered heatmap ---
     plt = heatmap(
+      cost_matrix;
+      title = "Clustered DTW Costs — $basevar",
+      xlabel = "",
+      ylabel = "",
+      colorbar_title = "Cost",
+      size = (800, 700),
+      xticks = false,
+      yticks = false,
+    )
+
+    plt = heatmap(
       cost_matrix_ord;
-      title = "Clustered DTW Costs — $var",
+      title = "Clustered DTW Costs — $basevar",
       xlabel = "",
       ylabel = "",
       colorbar_title = "Cost",
