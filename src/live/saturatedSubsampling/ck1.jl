@@ -18,15 +18,20 @@ using DynamicAxisWarping
 using Plots
 using Statistics
 using Random
+using UMAP
 
 # Load data
-df = load_timeseries(Vars.SIG1R_HT_file)
+df = readdf(Vars.SIG1R_HT_csv)
+for c in names(df)[2:end]
+    df[!, c] = Float64.(df[!, c])
+end
+
 
 # Group by subject
 gdf = groupby(df, :Animal)
 
 # Variables
-vars = setdiff(names(df), Vars.exclude_vars)
+vars = setdiff(names(df), Vars.xvars_csv)
 
 for var in vars[1:3]
     println("Processing variable: $var")
