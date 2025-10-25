@@ -7,6 +7,11 @@ date: October 13th
 # Description
 Extract signal patterns from metabolic trajectories by Dynamic Time Warping (DTW)
 
+```julia; echo = false, results = "hidden"
+include("saturatedSubsampling/config.jl")
+include("saturatedSubsampling/util.jl")
+```
+
 DTW analysis and clustering loop
 For each variable of interest, we:
 1. Subsample each animal’s signal into many short segments (to capture variability).
