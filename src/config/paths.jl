@@ -7,9 +7,12 @@ const PROJECT = normpath(joinpath(@__DIR__, "..", ".."))
 
 "data"
 const DATA = joinpath(PROJECT, "data")
-const CSV = joinpath(DATA, "csv")
+const SIGMA = joinpath(DATA, "sigma")
+const SCSV = joinpath(SIGMA, "csv")
+const SXLSX = joinpath(SIGMA, "xlsx")
 const HMGCR = joinpath(DATA, "HMGCR_TAM")
-const XLSX = joinpath(DATA, "xlsx")
+const HCSV = joinpath(HMGCR, "csv")
+const HXLSX = joinpath(HMGCR, "xlsx")
 
 "graph"
 const GRAPH = joinpath(PROJECT, "graph")
@@ -24,7 +27,7 @@ const UTIL = joinpath(SRC, "util")
 
 "Ensure directories exist (for outputs)"
 function ensure_dirs()
-  for d in (DATA, XLSX, GRAPH)
+  for d in (DATA, SIGMA, SCSV, SXLSX, HMGCR, HCSV, HXLSX, GRAPH, HTML)
     isdir(d) || mkpath(d)
   end
 end
