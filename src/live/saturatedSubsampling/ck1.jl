@@ -20,20 +20,14 @@ let
   using Random
   using UMAP
 
-  # Load data
-  df = readdf(Vars.SIG1R_HT_csv; sep = ',')
-  vars = setdiff(names(df), Vars.xvars_csv)
+  # Sigma experiment: one metadata XLSX, three CSV batches
+  sigma_params = TrajectoryParams(
+    metadata = Vars.SMETA_xlsx,
+    batches = [Vars.SIG1R_HT_csv, Vars.SIG1R_WT_csv, Vars.KO_WT_csv],
+  )
 
-  for c in Vars.xvars_csv
-    df[!, c] = DateTime.(df[!, c], dateformat"mm/dd/yyyy HH:MM:SS")
-  end
-
-  for c in vars
-    df[!, c] = Float64.(df[!, c])
-  end
-
-  # Group by subject
-  subdfs = split_by_animal(df)
+  bundles = load_experiments(sigma_params)
+  subdfs = split_by_animal(bundles)
 
   for var in vars[1:3]
     println("Processing variable: $var")
