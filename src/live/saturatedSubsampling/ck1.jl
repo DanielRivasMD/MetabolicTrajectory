@@ -15,6 +15,7 @@ let
   using DataFrames
   using Distances
   using DynamicAxisWarping
+  using LinearAlgebra
   using Plots
   using Statistics
   using Random
@@ -243,5 +244,47 @@ let
     ylabel = "Index",
   )
   display(plt)
+
+  # umap
+  # Inputs
+  C = cost_matrix            # n × n, symmetric, nonnegative
+  n = size(C, 1)
+
+  # UMAP on precomputed distances
+  Random.seed!(42)
+  embedding = umap(
+    C;
+    n_neighbors = 15,
+    min_dist = 0.1,
+    metric = :precomputed,   # key: treat C as distances
+  )  # returns 2 × n (or n × 2 depending on your UMAP; adjust indexing accordingly)
+
+  # Choose number of clusters (tune as needed)
+  k = 5
+  R = kmeans(embedding', k)     # k-means on rows (points)
+  labels_pred = R.assignments
+
+  # Build plots
+  p1 = scatter(
+    embedding[1, :],
+    embedding[2, :];
+    group = labels_pred,
+    legend = :outertopright,
+    title = "UMAP embedding colored by k-means clusters",
+    xlabel = "UMAP-1",
+    ylabel = "UMAP-2",
+  )
+
+  p2 = scatter(
+    embedding[1, :],
+    embedding[2, :];
+    group = 1:n,                 # proxy: index-based coloring
+    legend = :none,
+    title = "UMAP embedding colored by signal index",
+    xlabel = "UMAP-1",
+    ylabel = "UMAP-2",
+  )
+
+  plot(p1, p2; layout = (1, 2), size = (1000, 500))
 
 end
