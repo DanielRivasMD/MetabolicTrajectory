@@ -2,6 +2,7 @@
 
 using DataFrames
 using Dates
+using Statistics
 using XLSX
 
 ####################################################################################################
@@ -237,7 +238,11 @@ Returns a named tuple:
 - `subsamples::Vector{Vector{Float64}}` — the collected subsample vectors
 - `ids::Vector{String}` — identifiers of the form `"animalID_startIndex"`.
 """
-function collect_subsamples(subdfs::Dict{Int,DataFrame}, var::Symbol, params::TrajectoryParams)
+function collect_subsamples(
+  subdfs::Dict{Int,DataFrame},
+  var::Symbol,
+  params::TrajectoryParams,
+)
   # Reference length: maximum number of rows across all animals
   max_rows = maximum(nrow(df) for df in values(subdfs))
 
@@ -263,8 +268,10 @@ function collect_subsamples(subdfs::Dict{Int,DataFrame}, var::Symbol, params::Tr
 
     for i = 1:params.nsamples
       # Apply variance jitter
-      len_var =
-        round(Int, subsample_len * (1 + (rand() * params.subsample_var * 2 - params.subsample_var)))
+      len_var = round(
+        Int,
+        subsample_len * (1 + (rand() * params.subsample_var * 2 - params.subsample_var)),
+      )
 
       if n <= len_var
         @warn "Animal $animal_id has shorter signal ($n) than subsample length ($len_var), skipping"
@@ -299,6 +306,30 @@ function collect_subsamples(
   params::TrajectoryParams,
 )
   Dict(var => collect_subsamples(subdfs, var, params) for var in vars)
+end
+
+###################################################################################################
+
+"""
+    cost_stats(A)
+
+Compute basic statistics of a cost matrix (or any array):
+- minimum
+- maximum
+- mean
+- median
+- standard deviation
+
+Returns a NamedTuple.
+"""
+function cost_stats(A)
+  return (
+    min = minimum(A),
+    max = maximum(A),
+    mean = mean(A),
+    median = median(A),
+    std = std(A),
+  )
 end
 
 ###################################################################################################
