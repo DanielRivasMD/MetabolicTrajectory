@@ -219,4 +219,29 @@ let
   end
   display(plt)
 
+
+  # spectral analysis
+  # Suppose your cost matrix is symmetric and nonnegative
+  σ = std(cost_matrix)  # scale parameter
+  W = exp.(-cost_matrix .^ 2 ./ (2σ^2))  # similarity matrix
+  d = sum(W, dims = 2)                # degree vector
+  D_inv_sqrt = Diagonal(1 ./ sqrt.(vec(d)))
+  Lsym = I - D_inv_sqrt * W * D_inv_sqrt
+  using Arpack
+
+  k = 5  # number of clusters
+  vals, vecs = eigs(Lsym; nev = k, which = :SM)  # smallest eigenvalues
+
+  X = real(vecs)             # ensure real
+  R = kmeans(X', k)          # cluster rows of X
+  labels = R.assignments     # cluster assignment per signal
+  perm = sortperm(labels)
+  plt = heatmap(
+    cost_matrix[perm, perm];
+    title = "Spectral clustering block structure",
+    xlabel = "Index",
+    ylabel = "Index",
+  )
+  display(plt)
+
 end
