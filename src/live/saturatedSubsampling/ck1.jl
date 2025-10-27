@@ -26,45 +26,46 @@ let
     batches = [Vars.SIG1R_HT_csv, Vars.SIG1R_WT_csv, Vars.KO_WT_csv],
   )
 
+  # Load and split
   bundles = load_experiments(sigma_params)
   subdfs = split_by_animal(bundles)
 
-  for var in vars[1:3]
+  # Choose variables
+  vars = [:VO2_1, :VCO2_1]
+
+  # Collect subsamples for all variables at once
+  subsample_results = collect_subsamples(subdfs, vars, sigma_params)
+
+  # Now run DTW + clustering for each variable
+  for var in vars
     println("Processing variable: $var")
 
-    # Normalize variable name (strip trailing _N if present)
-    basevar = Symbol(replace(var, r"_\d+$" => ""))
-
-    # Collect subsamples and IDs
-    all_subsamples = Vector{Vector{Float64}}()
-    all_ids = String[]
-
-    # Iterate over dictionary entries
-    for (animal_id, subdf) in subdfs
-      # Clean the signal: drop missing values
-      raw_signal = subdf[!, basevar]
-      signal = collect(skipmissing(raw_signal))
-
-      n = length(signal)
-      if n == 0
-        @warn "Animal $animal_id has no valid data for $basevar, skipping"
-        continue
-      end
-
-      subsample_len = round(Int, 0.05 * n)
-      n_samples = 100
-
-      for i = 1:n_samples
-        len_var = round(Int, subsample_len * (1 .+ (rand() * 0.02 .- 0.01)))
-        start_idx = rand(1:(n-len_var))
-        subsample = signal[start_idx:start_idx+len_var-1]
-
-        push!(all_subsamples, subsample)
-        push!(all_ids, string(animal_id, "_", start_idx))
-      end
-    end
+    all_subsamples = subsample_results[var].subsamples
+    all_ids = subsample_results[var].ids
 
     N = length(all_subsamples)
+    if N == 0
+      @warn "No subsamples collected for $var, skipping"
+      continue
+    end
+
+    # Choose ~1% at random
+    k = max(1, round(Int, 0.01 * N))
+    idxs = rand(1:N, k)
+
+    # Plot them with fixed y-axis
+    plt = plot(
+      title = "Random 1% subsamples for $var",
+      xlabel = "Time index",
+      ylabel = "Value",
+      legend = false,
+      ylims = (0, 10),
+    )
+
+    for i in idxs
+      plot!(plt, all_subsamples[i], alpha = 0.6, lw = 1)
+    end
+    display(plt)
 
     # Compute DTW cost matrix
     cost_matrix = zeros(Float64, N, N)
@@ -77,19 +78,10 @@ let
       end
     end
 
-    # Hierarchical clustering
-    tree = hclust(cost_matrix; linkage = :ward)
-    leaf_order = tree.order
-    cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
-
-    # calcualte edges
-    edges_h = diff(cost_matrix; dims = 1)  # horizontal edges (row-to-row changes)
-    edges_v = diff(cost_matrix; dims = 2)  # vertical edges (col-to-col changes)
-
-    # --- Plot clustered heatmap ---
+    # Plot cost matrix
     plt = heatmap(
       cost_matrix;
-      title = "Clustered DTW Costs — $basevar",
+      title = "Clustered DTW Costs — $var",
       xlabel = "",
       ylabel = "",
       colorbar_title = "Cost",
@@ -97,10 +89,17 @@ let
       xticks = false,
       yticks = false,
     )
+    display(plt)
 
+    # Hierarchical clustering
+    tree = hclust(cost_matrix; linkage = :ward)
+    leaf_order = tree.order
+    cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
+
+    # Plot clustered heatmap
     plt = heatmap(
       cost_matrix_ord;
-      title = "Clustered DTW Costs — $basevar",
+      title = "Clustered DTW Costs — $var",
       xlabel = "",
       ylabel = "",
       colorbar_title = "Cost",
