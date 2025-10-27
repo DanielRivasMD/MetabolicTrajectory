@@ -12,12 +12,22 @@ include("saturatedSubsampling/config.jl")
 include("saturatedSubsampling/util.jl")
 ```
 
+
+1 index = 4.5 minutes
+whole recording 2200 indexes
+165 hours = 6.9 days
+5% ≈ 110 indices = 8 h 15 min
+
+
 DTW analysis and clustering loop
 For each variable of interest, we:
 1. Subsample each animal’s signal into many short segments (to capture variability).
 2. Compute a pairwise DTW cost matrix between all subsamples, normalized by length.
 3. Perform hierarchical clustering on the DTW distances.
 4. Visualize the clustered cost matrix as a heatmap to reveal structure in the signals.
+
+
+
 ```julia; echo = false
 include("saturatedSubsampling/ck1.jl")
 ```
