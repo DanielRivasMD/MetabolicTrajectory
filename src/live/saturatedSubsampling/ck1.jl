@@ -28,9 +28,23 @@ let
 
   # Load and split
   bundles = load_experiments(sigma_params)
+
+  # collect metadata
+  # Collect all metadata into one DataFrame
+  meta = vcat([b.metadata for b in values(bundles)]...)
+
+  # Keep only the columns of interest
+  meta = select(meta, [:Animal_nr, :Sex, :Genotype])
+
+  # Drop rows where Animal_nr == 0 (if those are placeholders)
+  filter!(row -> row.Animal_nr != 0, meta)
+  rename!(meta, :Animal_nr => :Animal)
+
+
   subdfs = split_by_animal(bundles)
 
   # Choose variables
+  # DOC: hardcoded variables
   vars = [:VO2_1, :VCO2_1]
 
   # Collect subsamples for all variables at once
@@ -77,6 +91,9 @@ let
         cost_matrix[j, i] = norm_cost
       end
     end
+
+    stats = cost_stats(cost_matrix)
+    print(stats)
 
     # Plot cost matrix
     plt = heatmap(
