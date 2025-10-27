@@ -39,17 +39,17 @@ Configuration container for metabolic trajectory sampling and preprocessing.
 - `subsample_len::Float64 = 0.05`  
   Desired subsample length.  
   - If `0 < subsample_len < 1`, it is interpreted as a fraction of the full trajectory length (e.g. `0.05` = 5%).  
-  - If `subsample_len ≥ 1`, it is interpreted as an absolute number of indices.
+  - If `subsample_len >= 1`, it is interpreted as an absolute number of indices.
 
 - `subsample_var::Float64 = 0.02`  
-  Relative variance allowed in subsample length (e.g. ±2%).
+  Relative variance allowed in subsample length (e.g. +-2%).
 """
 @with_kw mutable struct TrajectoryParams
   metadata::String
   batches::Vector{String}
   nsamples::Int = 100
   subsample_len::Float64 = 0.05
-  subsample_var::Float64 = 0.02
+  subsample_var::Float64 = 0.01
 end
 
 ####################################################################################################
