@@ -33,8 +33,6 @@ function compare_columns(df::DataFrame, subdf::DataFrame; drop = String[])
   return (; only_in_df, only_in_subdf)
 end
 
-####################################################################################################
-
 """
     compare_columns(df::DataFrame, subdfs::Dict{Int,DataFrame}; drop=String[])
 
@@ -76,19 +74,17 @@ Processing steps:
   `experiment::DataFrame`.
 """
 
-function load_experiments(p::TrajectoryParams)
+function load_experiments(params::TrajectoryParams)
   bundles = Dict{String,ExperimentBundle}()
 
-  XLSX.openxlsx(p.metadata) do xf
+  XLSX.openxlsx(params.metadata) do xf
     for sheetname in XLSX.sheetnames(xf)
       # Extract date in YYYY-MM-DD format from sheet name
       m = match(r"\d{4}-\d{2}-\d{2}", sheetname)
       isnothing(m) && continue
       datekey = m.match
 
-      # -----------------------------
       # Load and normalize metadata
-      # -----------------------------
       sheet = xf[sheetname]
       metadata = XLSX.gettable(sheet) |> DataFrame
 
@@ -109,18 +105,14 @@ function load_experiments(p::TrajectoryParams)
       metadata[!, :Genotype] =
         map(x -> x == "EMPTY" ? "" : string(x), metadata[!, :Genotype])
 
-      # -----------------------------
       # Find matching CSV file
-      # -----------------------------
-      csvmatch = filter(f -> occursin(datekey, f), p.batches)
+      csvmatch = filter(f -> occursin(datekey, f), params.batches)
       if isempty(csvmatch)
         @warn "No CSV file found for date $datekey"
         continue
       end
 
-      # -----------------------------
       # Load and normalize experiment
-      # -----------------------------
       df = readdf(first(csvmatch); sep = ',')
 
       vars = setdiff(names(df), Vars.xvars_csv)
@@ -135,9 +127,7 @@ function load_experiments(p::TrajectoryParams)
         df[!, c] = Float64.(df[!, c])
       end
 
-      # -----------------------------
       # Store bundle
-      # -----------------------------
       bundles[datekey] = ExperimentBundle(metadata, df)
     end
   end
@@ -197,8 +187,6 @@ function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = :Date_Time)
 
   return subdfs
 end
-
-###################################################################################################
 
 """
     split_by_animal(bundles::Dict{String,ExperimentBundle}; timecol::Symbol = :Date_Time)
