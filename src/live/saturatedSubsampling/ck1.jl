@@ -127,4 +127,96 @@ let
     display(plt)
   end
 
+  # TODO: encode in the lower triangle, where signal is coming from in relationship to the group (3) and in intensity in relationship to the recording
+  # TODO: perhaps try a de novo heatmap that capture row in upper triangle and rows in lower triangle, respecting the leaf order for hclust
+
+  # edge detection
+  edges_h_ord = diff(cost_matrix_ord; dims = 1)
+  edges_v_ord = diff(cost_matrix_ord; dims = 2)
+
+  edges_mag = sqrt.(edges_h_ord[:, 1:end-1] .^ 2 .+ edges_v_ord[1:end-1, :] .^ 2)
+
+  plt = heatmap(edges_mag; color = :inferno, title = "Gradient magnitude (edges)")
+  display(plt)
+
+  μ, σ = mean(edges_mag), std(edges_mag)
+  mask = edges_mag .> μ + 3σ   # keep only extreme edges
+  plt = heatmap(mask; color = :gray, title = "Thresholded edges")
+  display(plt)
+
+  row_score = sum(edges_mag, dims = 2)[:]   # boundary strength across rows
+  col_score = sum(edges_mag, dims = 1)[:]   # boundary strength across columns
+
+  p1 = plot(
+    row_score;
+    title = "Row boundary score",
+    xlabel = "Index",
+    ylabel = "Score",
+    legend = false,
+  )
+
+  p2 = plot(
+    col_score;
+    title = "Column boundary score",
+    xlabel = "Index",
+    ylabel = "Score",
+    legend = false,
+  )
+
+  plt = plot(p1, p2; layout = (2, 1), size = (800, 600))
+  display(plt)
+
+  plt = heatmap(cost_matrix_ord; color = :viridis, title = "Cost matrix with edges")
+  contour!(
+    plt,
+    edges_mag;
+    levels = [μ + 4σ],
+    color = :red,
+    alpha = 0.4,
+    linewidth = 0.5,
+    label = "",
+  )
+  display(plt)
+
+  # block detection
+  A = cost_matrix_ord
+  n = size(A, 1)
+  w = max(2, round(Int, 0.1 * n))   # 10% window width
+  boundary_score = zeros(n - 1)
+
+  # Slide window across columns
+  for start = 1:(n-w+1)
+    cols = start:(start+w-1)
+
+    # Row profile for this window
+    row_profile = mean(A[:, cols]; dims = 2) |> vec
+
+    # Differences between adjacent rows
+    d = diff(row_profile)
+
+    # Accumulate absolute differences
+    boundary_score .+= abs.(d)
+  end
+
+  # Normalize by number of windows
+  boundary_score ./= (n - w + 1)
+
+  # Threshold: μ + 2σ
+  μ, σ = mean(boundary_score), std(boundary_score)
+  selected = findall(boundary_score .> μ + 4σ)
+
+  # Convert to half-integers for overlay
+  boundaries = Float64.(selected) .+ 0.5
+
+  plt = plot(boundary_score; color = :black, lw = 2, label = "score")
+  hline!(plt, [μ + 4σ]; color = [:blue], linestyle = :dash, label = ["μ+4σ"])
+  display(plt)
+
+  plt = heatmap(A; legend = false, title = "Stability-selected boundaries")
+  for b in boundaries
+    vline!(plt, [b]; color = :red, alpha = 0.4, lw = 1, label = false)
+    hline!(plt, [b]; color = :red, alpha = 0.4, lw = 1, label = false)
+  end
+  display(plt)
+
 end
