@@ -13,3 +13,9 @@
 
 - reconsider using notebooks heavily
 - perform clustering on dtw matrices
+==================================================
+src/bin/FFT.jl
+  line 43     TODO   hardcoded
+src/util/plot.jl
+  line 3      TODO   make multiple dispatch for dataframe & groupeddataframe
+==================================================

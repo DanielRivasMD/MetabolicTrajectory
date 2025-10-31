@@ -139,9 +139,6 @@ let
     display(plt)
   end
 
-  # TODO: encode in the lower triangle, where signal is coming from in relationship to the group (3) and in intensity in relationship to the recording
-  # TODO: perhaps try a de novo heatmap that capture row in upper triangle and rows in lower triangle, respecting the leaf order for hclust
-
   # edge detection
   edges_h_ord = diff(cost_matrix_ord; dims = 1)
   edges_v_ord = diff(cost_matrix_ord; dims = 2)
