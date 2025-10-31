@@ -46,7 +46,7 @@ let
 
   # Choose variables
   # DOC: hardcoded variables
-  vars = [:VO2_1, :VCO2_1]
+  vars = [:RT_VO2, :RT_VCO2]
 
   # Collect subsamples for all variables at once
   subsample_results = collect_subsamples(subdfs, vars, sigma_params)
