@@ -109,6 +109,9 @@ let
     )
     display(plt)
 
+    plt, levels, colors = plot_grouped_costmatrix(cost_matrix, groups)
+    display(plt)
+    
     # Hierarchical clustering
     tree = hclust(cost_matrix; linkage = :ward)
     leaf_order = tree.order
