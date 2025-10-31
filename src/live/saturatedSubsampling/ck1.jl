@@ -40,7 +40,8 @@ let
   # Drop rows where Animal_nr == 0 (if those are placeholders)
   filter!(row -> row.Animal_nr != 0, meta)
   rename!(meta, :Animal_nr => :Animal)
-
+  meta.Group = string.(meta.Sex, "_", meta.Genotype)
+  animal_to_group = Dict(row.Animal => row.Group for row in eachrow(meta))
 
   subdfs = split_by_animal(bundles)
 
@@ -55,10 +56,13 @@ let
   for var in vars
     println("Processing variable: $var")
 
-    all_subsamples = subsample_results[var].subsamples
-    all_ids = subsample_results[var].ids
+    order = sortperm(subsample_results[var].ids; by = split_id)
+    all_ordered_subsamples = subsample_results[var].subsamples[order]
+    all_ordered_ids = subsample_results[var].ids[order]
+    prefixes = parse.(Int, first.(split.(all_ordered_ids, "_")))
+    groups = [animal_to_group[p] for p in prefixes]
 
-    N = length(all_subsamples)
+    N = length(all_ordered_subsamples)
     if N == 0
       @warn "No subsamples collected for $var, skipping"
       continue
@@ -78,7 +82,7 @@ let
     )
 
     for i in idxs
-      plot!(plt, all_subsamples[i], alpha = 0.6, lw = 1)
+      plot!(plt, all_ordered_subsamples[i], alpha = 0.6, lw = 1)
     end
     display(plt)
 
@@ -86,8 +90,11 @@ let
     cost_matrix = zeros(Float64, N, N)
     for i = 1:N
       for j = i:N
-        cost, _, _ = dtw(all_subsamples[i], all_subsamples[j], SqEuclidean())
-        norm_cost = cost / mean([length(all_subsamples[i]), length(all_subsamples[j])])
+        cost, _, _ =
+          dtw(all_ordered_subsamples[i], all_ordered_subsamples[j], SqEuclidean())
+        norm_cost =
+          cost /
+          mean([length(all_ordered_subsamples[i]), length(all_ordered_subsamples[j])])
         cost_matrix[i, j] = norm_cost
         cost_matrix[j, i] = norm_cost
       end
@@ -116,6 +123,7 @@ let
     tree = hclust(cost_matrix; linkage = :ward)
     leaf_order = tree.order
     cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
+    groups_ord = groups[leaf_order]
 
     # Plot clustered heatmap
     plt = heatmap(
