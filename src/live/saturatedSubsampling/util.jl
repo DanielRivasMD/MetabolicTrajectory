@@ -379,9 +379,9 @@ function plot_grouped_costmatrix(
   group_to_code = Dict(g => i for (i, g) in enumerate(group_levels))
   codes = [group_to_code[g] for g in groups]
 
-  # Normalize cost matrix to 0–100
-  Cmin, Cmax = extrema(cost_matrix)
-  C_scaled = (cost_matrix .- Cmin) ./ (Cmax - Cmin) .* 100
+  # # Normalize cost matrix to 0–100
+  # Cmin, Cmax = extrema(cost_matrix)
+  # C_scaled = (cost_matrix .- Cmin) ./ (Cmax - Cmin) .* 100
 
   # Assign colors
   if group_colors === nothing
@@ -394,7 +394,7 @@ function plot_grouped_costmatrix(
   # --- Build masked matrices ---
   # Core only (pad = NaN)
   core_only = fill(NaN, N + pad, N + pad)
-  core_only[pad+1:end, pad+1:end] .= C_scaled
+  core_only[pad+1:end, pad+1:end] .= cost_matrix
 
   # Pad only (core = NaN)
   pad_only = fill(NaN, N + pad, N + pad)
@@ -403,22 +403,31 @@ function plot_grouped_costmatrix(
     pad_only[pad+i, 1:pad] .= codes[i]      # left strip
   end
 
-  # --- Plot in two layers ---
-  plt = heatmap(
-    core_only;
-    color = :inferno,
-    yflip = true,
-    legend = false,
-    title = "Cost Matrix with Group Bars",
-  )
+    plt = heatmap(core_only; color = :inferno, yflip = true, legend = false)
+    heatmap!(
+      pad_only;
+      color = cgrad(group_colors, categorical = true),
+      yflip = true,
+      legend = false,
+    )
 
-  heatmap!(
-    plt,
-    pad_only;
-    color = cgrad(group_colors, categorical = true),
-    yflip = true,
-    legend = false,
-  )
+
+  # # --- Plot in two layers ---
+  # plt = heatmap(
+  #   core_only;
+  #   color = :inferno,
+  #   yflip = true,
+  #   legend = false,
+  #   title = "Cost Matrix with Group Bars",
+  # )
+
+  # heatmap!(
+  #   plt,
+  #   pad_only;
+  #   color = cgrad(group_colors, categorical = true),
+  #   yflip = true,
+  #   legend = false,
+  # )
 
   return plt, group_levels, group_colors
 end
