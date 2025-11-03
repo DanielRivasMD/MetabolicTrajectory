@@ -53,7 +53,9 @@ let
   subsample_results = collect_subsamples(subdfs, vars, sigma_params)
 
   # Now run DTW + clustering for each variable
-  for var in vars
+  # for var in vars
+
+  var = first(vars)
     println("Processing variable: $var")
 
     order = sortperm(subsample_results[var].ids; by = split_id)
@@ -65,7 +67,6 @@ let
     N = length(all_ordered_subsamples)
     if N == 0
       @warn "No subsamples collected for $var, skipping"
-      continue
     end
 
     # Choose ~1% at random
@@ -137,7 +138,9 @@ let
       yticks = false,
     )
     display(plt)
-  end
+
+    plt, levels, colors = plot_grouped_costmatrix(cost_matrix_ord, groups_ord)
+    display(plt)
 
   # edge detection
   edges_h_ord = diff(cost_matrix_ord; dims = 1)
@@ -175,7 +178,7 @@ let
   plt = plot(p1, p2; layout = (2, 1), size = (800, 600))
   display(plt)
 
-  plt = heatmap(cost_matrix_ord; color = :viridis, title = "Cost matrix with edges")
+  plt = heatmap(cost_matrix_ord; color = :inferno, title = "Cost matrix with edges")
   contour!(
     plt,
     edges_mag;
@@ -228,9 +231,7 @@ let
   end
   display(plt)
 
-
   # spectral analysis
-  # Suppose your cost matrix is symmetric and nonnegative
   σ = std(cost_matrix)  # scale parameter
   W = exp.(-cost_matrix .^ 2 ./ (2σ^2))  # similarity matrix
   d = sum(W, dims = 2)                # degree vector
@@ -269,7 +270,7 @@ let
 
   # Choose number of clusters (tune as needed)
   k = 5
-  R = kmeans(embedding', k)     # k-means on rows (points)
+  R = kmeans(embedding, k)     # k-means on rows (points)
   labels_pred = R.assignments
 
   # Build plots
@@ -293,6 +294,35 @@ let
     ylabel = "UMAP-2",
   )
 
-  plot(p1, p2; layout = (1, 2), size = (1000, 500))
+  plt = plot(p1, p2; layout = (1, 2), size = (1000, 500))
+  display(plt)
+
+# PCA clustering from DTW costs
+pca_res = pca_clustering_from_cost(cost_matrix_ord; n_components=10, k=5)
+perm_pca = sortperm(pca_res.assignments)
+plt = heatmap(cost_matrix_ord[perm_pca, perm_pca];
+              title="PCA clustering block structure",
+              xlabel="", ylabel="", legend=false)
+display(plt)
+
+# t-SNE clustering from DTW costs
+tsne_res = tsne_clustering_from_cost(cost_matrix_ord; perplexity=30, k=5)
+
+# Reorder indices by cluster assignment
+perm_tsne = sortperm(tsne_res.assignments)
+
+# Visualize t-SNE embedding
+plt_embed = scatter(tsne_res.embedding[:,1], tsne_res.embedding[:,2];
+                    group=tsne_res.assignments,
+                    legend=:outertopright,
+                    title="t-SNE embedding colored by k-means clusters",
+                    xlabel="t-SNE-1", ylabel="t-SNE-2")
+display(plt_embed)
+
+# Reordered cost matrix by t-SNE clusters
+plt_tsne = heatmap(cost_matrix_ord[perm_tsne, perm_tsne];
+                   title="t-SNE clustering block structure",
+                   xlabel="", ylabel="", legend=false)
+display(plt_tsne)
 
 end
