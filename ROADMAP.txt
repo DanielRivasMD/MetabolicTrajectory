@@ -1,3 +1,10 @@
+- simulated data:
+  - create a signal representing half a day & a second representing the other half
+  - bind those two halves & extrapolated by a week
+  - create a second week long signal with a different seed
+  - run the procedure to identify segments from the signals done with original data
+
+
 - initial statistical analysis
 - calculate dynamic time warping => section records into parts & capture local profile
 - implement graph analysis => fully connected graph -> pruned graph
