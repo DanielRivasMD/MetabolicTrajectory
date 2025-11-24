@@ -1,3 +1,5 @@
+####################################################################################################
+
 using Random
 using UnicodePlots
 
@@ -71,3 +73,57 @@ lineplot(1:length(week_signal1), week_signal1; width = 150, title = "Week Signal
 display
 lineplot(1:length(week_signal2), week_signal2; width = 150, title = "Week Signal 2") |>
 display
+
+####################################################################################################
+
+s1 = collect_subsamples(week_signal1, sigma_params)
+s2 = collect_subsamples(week_signal2, sigma_params)
+
+# Prefix IDs to distinguish weeks
+s1_ids_prefixed = ["1_" * id for id in s1.ids]
+s2_ids_prefixed = ["2_" * id for id in s2.ids]
+
+# Concatenate subsamples and ids
+all_subsamples = vcat(s1.subsamples, s2.subsamples)
+all_ids = vcat(s1_ids_prefixed, s2_ids_prefixed)
+
+# Wrap into dictionary with key :simulation
+subsample_results = Dict(:simulation => (subsamples = all_subsamples, ids = all_ids))
+
+# Example: inspect
+println("Total subsamples: ", length(subsample_results[:simulation].subsamples))
+println("First 5 IDs: ", subsample_results[:simulation].ids[1:5])
+
+order = sortperm(subsample_results[:simulation].ids; by = split_id)
+all_ordered_subsamples = subsample_results[:simulation].subsamples[order]
+all_ordered_ids = subsample_results[:simulation].ids[order]
+groups = parse.(Int, first.(split.(all_ordered_ids, "_"))) .|> string
+
+N = length(all_ordered_subsamples)
+
+# Compute DTW cost matrix
+cost_matrix = zeros(Float64, N, N)
+for i = 1:N
+  for j = i:N
+    cost, _, _ = dtw(all_ordered_subsamples[i], all_ordered_subsamples[j], SqEuclidean())
+    norm_cost =
+      cost / mean([length(all_ordered_subsamples[i]), length(all_ordered_subsamples[j])])
+    cost_matrix[i, j] = norm_cost
+    cost_matrix[j, i] = norm_cost
+  end
+end
+
+plt, levels, colors = plot_grouped_costmatrix(cost_matrix, groups)
+display(plt)
+
+# Hierarchical clustering
+tree = hclust(cost_matrix; linkage = :ward)
+leaf_order = tree.order
+cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
+groups_ord = groups[leaf_order]
+
+plt, levels, colors = plot_grouped_costmatrix(cost_matrix_ord, groups_ord)
+display(plt)
+
+
+####################################################################################################
