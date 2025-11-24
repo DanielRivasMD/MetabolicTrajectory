@@ -56,91 +56,89 @@ let
   # for var in vars
 
   var = first(vars)
-    println("Processing variable: $var")
+  println("Processing variable: $var")
 
-    order = sortperm(subsample_results[var].ids; by = split_id)
-    all_ordered_subsamples = subsample_results[var].subsamples[order]
-    all_ordered_ids = subsample_results[var].ids[order]
-    prefixes = parse.(Int, first.(split.(all_ordered_ids, "_")))
-    groups = [animal_to_group[p] for p in prefixes]
+  order = sortperm(subsample_results[var].ids; by = split_id)
+  all_ordered_subsamples = subsample_results[var].subsamples[order]
+  all_ordered_ids = subsample_results[var].ids[order]
+  prefixes = parse.(Int, first.(split.(all_ordered_ids, "_")))
+  groups = [animal_to_group[p] for p in prefixes]
 
-    N = length(all_ordered_subsamples)
-    if N == 0
-      @warn "No subsamples collected for $var, skipping"
+  N = length(all_ordered_subsamples)
+  if N == 0
+    @warn "No subsamples collected for $var, skipping"
+  end
+
+  # Choose ~1% at random
+  k = max(1, round(Int, 0.01 * N))
+  idxs = rand(1:N, k)
+
+  # Plot them with fixed y-axis
+  plt = plot(
+    title = "Random 1% subsamples for $var",
+    xlabel = "Time index",
+    ylabel = "Value",
+    legend = false,
+    ylims = (0, 10),
+  )
+
+  for i in idxs
+    plot!(plt, all_ordered_subsamples[i], alpha = 0.6, lw = 1)
+  end
+  display(plt)
+
+  # Compute DTW cost matrix
+  cost_matrix = zeros(Float64, N, N)
+  for i = 1:N
+    for j = i:N
+      cost, _, _ = dtw(all_ordered_subsamples[i], all_ordered_subsamples[j], SqEuclidean())
+      norm_cost =
+        cost / mean([length(all_ordered_subsamples[i]), length(all_ordered_subsamples[j])])
+      cost_matrix[i, j] = norm_cost
+      cost_matrix[j, i] = norm_cost
     end
+  end
 
-    # Choose ~1% at random
-    k = max(1, round(Int, 0.01 * N))
-    idxs = rand(1:N, k)
+  stats = cost_stats(cost_matrix)
+  print(stats)
 
-    # Plot them with fixed y-axis
-    plt = plot(
-      title = "Random 1% subsamples for $var",
-      xlabel = "Time index",
-      ylabel = "Value",
-      legend = false,
-      ylims = (0, 10),
-    )
+  # Plot cost matrix
+  plt = heatmap(
+    cost_matrix;
+    title = "Clustered DTW Costs — $var",
+    xlabel = "",
+    ylabel = "",
+    colorbar_title = "Cost",
+    size = (800, 700),
+    xticks = false,
+    yticks = false,
+  )
+  display(plt)
 
-    for i in idxs
-      plot!(plt, all_ordered_subsamples[i], alpha = 0.6, lw = 1)
-    end
-    display(plt)
+  plt, levels, colors = plot_grouped_costmatrix(cost_matrix, groups)
+  display(plt)
 
-    # Compute DTW cost matrix
-    cost_matrix = zeros(Float64, N, N)
-    for i = 1:N
-      for j = i:N
-        cost, _, _ =
-          dtw(all_ordered_subsamples[i], all_ordered_subsamples[j], SqEuclidean())
-        norm_cost =
-          cost /
-          mean([length(all_ordered_subsamples[i]), length(all_ordered_subsamples[j])])
-        cost_matrix[i, j] = norm_cost
-        cost_matrix[j, i] = norm_cost
-      end
-    end
+  # Hierarchical clustering
+  tree = hclust(cost_matrix; linkage = :ward)
+  leaf_order = tree.order
+  cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
+  groups_ord = groups[leaf_order]
 
-    stats = cost_stats(cost_matrix)
-    print(stats)
+  # Plot clustered heatmap
+  plt = heatmap(
+    cost_matrix_ord;
+    title = "Clustered DTW Costs — $var",
+    xlabel = "",
+    ylabel = "",
+    colorbar_title = "Cost",
+    size = (800, 700),
+    xticks = false,
+    yticks = false,
+  )
+  display(plt)
 
-    # Plot cost matrix
-    plt = heatmap(
-      cost_matrix;
-      title = "Clustered DTW Costs — $var",
-      xlabel = "",
-      ylabel = "",
-      colorbar_title = "Cost",
-      size = (800, 700),
-      xticks = false,
-      yticks = false,
-    )
-    display(plt)
-
-    plt, levels, colors = plot_grouped_costmatrix(cost_matrix, groups)
-    display(plt)
-    
-    # Hierarchical clustering
-    tree = hclust(cost_matrix; linkage = :ward)
-    leaf_order = tree.order
-    cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
-    groups_ord = groups[leaf_order]
-
-    # Plot clustered heatmap
-    plt = heatmap(
-      cost_matrix_ord;
-      title = "Clustered DTW Costs — $var",
-      xlabel = "",
-      ylabel = "",
-      colorbar_title = "Cost",
-      size = (800, 700),
-      xticks = false,
-      yticks = false,
-    )
-    display(plt)
-
-    plt, levels, colors = plot_grouped_costmatrix(cost_matrix_ord, groups_ord)
-    display(plt)
+  plt, levels, colors = plot_grouped_costmatrix(cost_matrix_ord, groups_ord)
+  display(plt)
 
   # edge detection
   edges_h_ord = diff(cost_matrix_ord; dims = 1)
@@ -297,32 +295,44 @@ let
   plt = plot(p1, p2; layout = (1, 2), size = (1000, 500))
   display(plt)
 
-# PCA clustering from DTW costs
-pca_res = pca_clustering_from_cost(cost_matrix_ord; n_components=10, k=5)
-perm_pca = sortperm(pca_res.assignments)
-plt = heatmap(cost_matrix_ord[perm_pca, perm_pca];
-              title="PCA clustering block structure",
-              xlabel="", ylabel="", legend=false)
-display(plt)
+  # PCA clustering from DTW costs
+  pca_res = pca_clustering_from_cost(cost_matrix_ord; n_components = 10, k = 5)
+  perm_pca = sortperm(pca_res.assignments)
+  plt = heatmap(
+    cost_matrix_ord[perm_pca, perm_pca];
+    title = "PCA clustering block structure",
+    xlabel = "",
+    ylabel = "",
+    legend = false,
+  )
+  display(plt)
 
-# t-SNE clustering from DTW costs
-tsne_res = tsne_clustering_from_cost(cost_matrix_ord; perplexity=30, k=5)
+  # t-SNE clustering from DTW costs
+  tsne_res = tsne_clustering_from_cost(cost_matrix_ord; perplexity = 30, k = 5)
 
-# Reorder indices by cluster assignment
-perm_tsne = sortperm(tsne_res.assignments)
+  # Reorder indices by cluster assignment
+  perm_tsne = sortperm(tsne_res.assignments)
 
-# Visualize t-SNE embedding
-plt_embed = scatter(tsne_res.embedding[:,1], tsne_res.embedding[:,2];
-                    group=tsne_res.assignments,
-                    legend=:outertopright,
-                    title="t-SNE embedding colored by k-means clusters",
-                    xlabel="t-SNE-1", ylabel="t-SNE-2")
-display(plt_embed)
+  # Visualize t-SNE embedding
+  plt_embed = scatter(
+    tsne_res.embedding[:, 1],
+    tsne_res.embedding[:, 2];
+    group = tsne_res.assignments,
+    legend = :outertopright,
+    title = "t-SNE embedding colored by k-means clusters",
+    xlabel = "t-SNE-1",
+    ylabel = "t-SNE-2",
+  )
+  display(plt_embed)
 
-# Reordered cost matrix by t-SNE clusters
-plt_tsne = heatmap(cost_matrix_ord[perm_tsne, perm_tsne];
-                   title="t-SNE clustering block structure",
-                   xlabel="", ylabel="", legend=false)
-display(plt_tsne)
+  # Reordered cost matrix by t-SNE clusters
+  plt_tsne = heatmap(
+    cost_matrix_ord[perm_tsne, perm_tsne];
+    title = "t-SNE clustering block structure",
+    xlabel = "",
+    ylabel = "",
+    legend = false,
+  )
+  display(plt_tsne)
 
 end
