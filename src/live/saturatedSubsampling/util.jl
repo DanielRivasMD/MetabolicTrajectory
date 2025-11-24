@@ -222,32 +222,82 @@ end
 ###################################################################################################
 
 """
-    collect_subsamples(subdfs::Dict{Int,DataFrame}, var::Symbol, params::TrajectoryParams)
+    collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
 
-Collect subsamples from a single variable across all animals according to parameters in `params`.
+Extract contiguous subsamples from a single signal vector according to `params`.
 
-- **Reference length** is the maximum number of rows across all animals in `subdfs`.
-- **`p.subsample_len`**:
-  - If `0 < subsample_len < 1`, interpreted as a fraction of the reference length.
+- **Reference length** is the length of the signal itself.
+- **`params.subsample_len`**:
+  - If `0 < subsample_len < 1`, interpreted as a fraction of the signal length.
   - If `subsample_len >= 1`, interpreted as an absolute number of indices.
-- **`params.subsample_var`** applies +-variance jitter to the subsample length.
-- **`params.nsamples`** controls how many subsamples to draw per animal.
+- **`params.subsample_var`** applies ±variance jitter to the subsample length.
+- **`params.nsamples`** controls how many subsamples to draw.
 
 Each subsample is a contiguous slice of the signal, chosen at a random starting index,
 with length jittered around the target subsample length.
 
 Returns a named tuple:
 - `subsamples::Vector{Vector{Float64}}` — the collected subsample vectors
-- `ids::Vector{String}` — identifiers of the form `"animalID_startIndex"`.
+- `ids::Vector{String}` — identifiers of the form `"startIndex"`
+"""
+function collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
+  n = length(signal)
+  if n == 0
+    return (subsamples = Vector{Vector{Float64}}(), ids = String[])
+  end
+
+  # Determine base subsample length
+  subsample_len = if 0 < params.subsample_len < 1
+    round(Int, params.subsample_len * n)
+  else
+    round(Int, params.subsample_len)
+  end
+
+  subsamples = Vector{Vector{Float64}}()
+  ids = String[]
+
+  for i = 1:params.nsamples
+    # Apply variance jitter
+    len_var = round(
+      Int,
+      subsample_len * (1 + (rand() * params.subsample_var * 2 - params.subsample_var)),
+    )
+
+    if n <= len_var
+      @warn "Signal shorter ($n) than subsample length ($len_var), skipping"
+      continue
+    end
+
+    start_idx = rand(1:(n-len_var))
+    subsample = signal[start_idx:start_idx+len_var-1]
+
+    push!(subsamples, subsample)
+    push!(ids, string(start_idx))
+  end
+
+  return (subsamples = subsamples, ids = ids)
+end
+
+
+"""
+    collect_subsamples(subdfs::Dict{Int,DataFrame}, var::Symbol, params::TrajectoryParams)
+
+Collect subsamples from a single variable across all animals according to parameters in `params`.
+
+- **Reference length** is the maximum number of rows across all animals in `subdfs`.
+- Delegates to `collect_subsamples(signal, params)` for each animal’s signal vector.
+- Each subsample is tagged with `"animalID_startIndex"`.
+
+Returns a named tuple:
+- `subsamples::Vector{Vector{Float64}}`
+- `ids::Vector{String}`
 """
 function collect_subsamples(
   subdfs::Dict{Int,DataFrame},
   var::Symbol,
   params::TrajectoryParams,
 )
-  # Reference length: maximum number of rows across all animals
   max_rows = maximum(nrow(df) for df in values(subdfs))
-
   basevar = Symbol(replace(string(var), r"_\d+$" => ""))
 
   all_subsamples = Vector{Vector{Float64}}()
@@ -255,47 +305,27 @@ function collect_subsamples(
 
   for (animal_id, subdf) in subdfs
     signal = collect(skipmissing(subdf[!, basevar]))
-    n = length(signal)
-    if n == 0
+    if isempty(signal)
       @warn "Animal $animal_id has no valid data for $basevar, skipping"
       continue
     end
 
-    # Determine subsample length
-    subsample_len = if 0 < params.subsample_len < 1
-      round(Int, params.subsample_len * max_rows)
-    else
-      round(Int, params.subsample_len)
-    end
-
-    for i = 1:params.nsamples
-      # Apply variance jitter
-      len_var = round(
-        Int,
-        subsample_len * (1 + (rand() * params.subsample_var * 2 - params.subsample_var)),
-      )
-
-      if n <= len_var
-        @warn "Animal $animal_id has shorter signal ($n) than subsample length ($len_var), skipping"
-        continue
-      end
-
-      start_idx = rand(1:(n-len_var))
-      subsample = signal[start_idx:start_idx+len_var-1]
-
-      push!(all_subsamples, subsample)
-      push!(all_ids, string(animal_id, "_", start_idx))
-    end
+    # Use the vector-based function
+    result = collect_subsamples(signal, params)
+    append!(all_subsamples, result.subsamples)
+    # Prefix IDs with animal_id
+    append!(all_ids, [string(animal_id, "_", id) for id in result.ids])
   end
 
   return (subsamples = all_subsamples, ids = all_ids)
 end
 
+
 """
     collect_subsamples(subdfs::Dict{Int,DataFrame}, vars::Vector{Symbol}, params::TrajectoryParams)
 
 Collect subsamples for multiple variables by delegating to
-`collect_subsamples(subdfs, var, p)` for each variable.
+`collect_subsamples(subdfs, var, params)` for each variable.
 
 Returns a dictionary keyed by normalized variable symbol (suffix `_N` stripped).
 Each value is a named tuple:
