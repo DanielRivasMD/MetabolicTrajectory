@@ -373,73 +373,54 @@ end
 
 ###################################################################################################
 
-using Plots, Colors
+using Plots
+using Colors
 
-"""
-    plot_grouped_costmatrix(cost_matrix, groups; pad=10, group_colors=nothing)
-
-Embed group membership as colored bars along the top and left edges of a cost matrix
-and plot as a single heatmap.
-
-Arguments:
-- `cost_matrix::Matrix{Float64}` — the N×N cost matrix
-- `groups::Vector{String}` — length N, group label for each trajectory
-- `pad::Int` — thickness of the colored bars (default 10)
-- `group_colors::Union{Nothing, Vector{<:Colorant}}` — optional custom colors for groups.
-   If `nothing`, colors are generated automatically in the green/blue range.
-
-Behavior:
-- Normalizes cost values to 0–100
-- Uses provided colors if given, otherwise generates them
-- Renders the cost matrix and group bars in two masked layers
-- Returns the plot object, group levels, and colors
-"""
 function plot_grouped_costmatrix(
   cost_matrix::Matrix{Float64},
   groups::Vector{String};
   pad::Int = 10,
   group_colors::Union{Nothing,Vector{<:Colorant}} = nothing,
 )
-
   N = size(cost_matrix, 1)
+  @assert size(cost_matrix, 2) == N "cost_matrix must be square"
   @assert length(groups) == N "groups vector must match matrix size"
 
-  # Map groups to codes
+  # Map groups to integer codes
   group_levels = unique(groups)
   group_to_code = Dict(g => i for (i, g) in enumerate(group_levels))
   codes = [group_to_code[g] for g in groups]
 
-  # # Normalize cost matrix to 0–100
-  # Cmin, Cmax = extrema(cost_matrix)
-  # C_scaled = (cost_matrix .- Cmin) ./ (Cmax - Cmin) .* 100
-
-  # Assign colors
+  # Colors per group
   if group_colors === nothing
-    base = RGB(0, 0.5, 0.5)
+    base = RGB(0.0, 0.5, 0.5)
     group_colors = distinguishable_colors(length(group_levels), [base])
   else
-    @assert length(group_colors) == length(group_levels) "Number of colors must match number of groups"
+    @assert length(group_colors) == length(group_levels)
   end
 
   # --- Build masked matrices ---
-  # Core only (pad = NaN)
-  core_only = fill(NaN, N + pad, N + pad)
-  core_only[pad+1:end, pad+1:end] .= cost_matrix
+  core_only = fill(Float64(NaN), N + pad, N + pad)
+  core_only[pad+1:end, 1:N] .= cost_matrix   # core in bottom-left block
 
-  # Pad only (core = NaN)
-  pad_only = fill(NaN, N + pad, N + pad)
+  pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
   for i = 1:N
-    pad_only[1:pad, pad+i] .= codes[i]      # top strip
-    pad_only[pad+i, 1:pad] .= codes[i]      # left strip
+    pad_colors[1:pad, i] .= group_colors[codes[i]]        # top strip
+    pad_colors[pad+i, N+1:N+pad] .= group_colors[codes[i]] # right strip
   end
 
-  plt = heatmap(core_only; color = :inferno, yflip = true, legend = false)
-  heatmap!(
-    pad_only;
-    color = cgrad(group_colors, categorical = true),
+  # Plot core heatmap with axes disabled
+  plt = heatmap(
+    core_only;
+    color = :inferno,
     yflip = true,
     legend = false,
+    nan_color = RGBA(0, 0, 0, 0),
+    axis = false,   # remove x/y axes annotations
   )
+
+  # Overlay pad colors directly
+  plot!(plt, pad_colors; seriestype = :heatmap, yflip = true, legend = false, axis = false)
 
   return plt, group_levels, group_colors
 end
