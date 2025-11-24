@@ -47,8 +47,8 @@ Configuration container for metabolic trajectory sampling and preprocessing.
 @with_kw mutable struct TrajectoryParams
   metadata::String
   batches::Vector{String}
-  nsamples::Int = 10
-  subsample_len::Float64 = 0.05
+  nsamples::Int = 100
+  subsample_len::Float64 = 0.075
   subsample_var::Float64 = 0.01
 end
 
