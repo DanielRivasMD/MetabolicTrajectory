@@ -403,13 +403,13 @@ function plot_grouped_costmatrix(
     pad_only[pad+i, 1:pad] .= codes[i]      # left strip
   end
 
-    plt = heatmap(core_only; color = :inferno, yflip = true, legend = false)
-    heatmap!(
-      pad_only;
-      color = cgrad(group_colors, categorical = true),
-      yflip = true,
-      legend = false,
-    )
+  plt = heatmap(core_only; color = :inferno, yflip = true, legend = false)
+  heatmap!(
+    pad_only;
+    color = cgrad(group_colors, categorical = true),
+    yflip = true,
+    legend = false,
+  )
 
   return plt, group_levels, group_colors
 end
@@ -417,67 +417,72 @@ end
 using LinearAlgebra
 
 # Classical MDS: from distance matrix D to m-dimensional embedding (default 50)
-function mds_embedding(D::AbstractMatrix{<:Real}; m::Int=50)
-    @assert size(D,1) == size(D,2) "D must be square"
-    n = size(D,1)
-    # Square distances
-    D2 = D .^ 2
-    # Double-centering: B = -0.5 * J * D2 * J
-    J = I - (1/n) * ones(n, n)
-    B = -0.5 * J * D2 * J
-    # Eigen-decomposition (symmetric)
-    vals, vecs = eigen(Symmetric(B))
-    # Keep positive eigenvalues (numerical safety)
-    pos = findall(>(0), vals)
-    if isempty(pos)
-        error("MDS failed: no positive eigenvalues")
-    end
-    k = min(m, length(pos))
-    idx = reverse(pos)[1:k]               # largest positive
-    Λ = Diagonal(sqrt.(vals[idx]))        # scale by sqrt(eigenvalues)
-    X = vecs[:, idx] * Λ                  # n × k embedding
-    return X
+function mds_embedding(D::AbstractMatrix{<:Real}; m::Int = 50)
+  @assert size(D, 1) == size(D, 2) "D must be square"
+  n = size(D, 1)
+  # Square distances
+  D2 = D .^ 2
+  # Double-centering: B = -0.5 * J * D2 * J
+  J = I - (1 / n) * ones(n, n)
+  B = -0.5 * J * D2 * J
+  # Eigen-decomposition (symmetric)
+  vals, vecs = eigen(Symmetric(B))
+  # Keep positive eigenvalues (numerical safety)
+  pos = findall(>(0), vals)
+  if isempty(pos)
+    error("MDS failed: no positive eigenvalues")
+  end
+  k = min(m, length(pos))
+  idx = reverse(pos)[1:k]               # largest positive
+  Λ = Diagonal(sqrt.(vals[idx]))        # scale by sqrt(eigenvalues)
+  X = vecs[:, idx] * Λ                  # n × k embedding
+  return X
 end
 
 using MultivariateStats, Clustering, Statistics
 
-function pca_clustering_from_cost(D::AbstractMatrix{<:Real};
-                                  n_components::Int=10, k::Int=5)
-    # Embed distances into Euclidean space first
-    X = mds_embedding(D; m=max(n_components, 50))
+function pca_clustering_from_cost(
+  D::AbstractMatrix{<:Real};
+  n_components::Int = 10,
+  k::Int = 5,
+)
+  # Embed distances into Euclidean space first
+  X = mds_embedding(D; m = max(n_components, 50))
 
-    # Center the data
-    Xc = X .- mean(X, dims=1)
+  # Center the data
+  Xc = X .- mean(X, dims = 1)
 
-    # PCA
-    M = fit(PCA, Xc; maxoutdim=n_components)
-    scores = MultivariateStats.transform(M, Xc)
+  # PCA
+  M = fit(PCA, Xc; maxoutdim = n_components)
+  scores = MultivariateStats.transform(M, Xc)
 
-    # Cluster
-    R = kmeans(scores', k)
-    return (scores=scores, assignments=R.assignments, centers=R.centers)
+  # Cluster
+  R = kmeans(scores', k)
+  return (scores = scores, assignments = R.assignments, centers = R.centers)
 end
 
 using TSne, Random, Clustering
 
-function tsne_clustering_from_cost(D::AbstractMatrix{<:Real};
-                                   k::Int=5,
-                                   no_dims::Int=2,
-                                   initial_dims::Int=50,
-                                   perplexity::Int=30,
-                                   max_iter::Int=1000,
-                                   seed::Int=42)
+function tsne_clustering_from_cost(
+  D::AbstractMatrix{<:Real};
+  k::Int = 5,
+  no_dims::Int = 2,
+  initial_dims::Int = 50,
+  perplexity::Int = 30,
+  max_iter::Int = 1000,
+  seed::Int = 42,
+)
 
-    # Embed distances into Euclidean space first
-    X = mds_embedding(D; m=initial_dims)
+  # Embed distances into Euclidean space first
+  X = mds_embedding(D; m = initial_dims)
 
-    # Run t-SNE with perplexity as positional argument
-    Random.seed!(seed)
-    Y = tsne(X, no_dims, initial_dims, perplexity, max_iter)
+  # Run t-SNE with perplexity as positional argument
+  Random.seed!(seed)
+  Y = tsne(X, no_dims, initial_dims, perplexity, max_iter)
 
-    # Cluster the embedding
-    R = kmeans(Y', k)
-    return (embedding=Y, assignments=R.assignments)
+  # Cluster the embedding
+  R = kmeans(Y', k)
+  return (embedding = Y, assignments = R.assignments)
 end
 
 ###################################################################################################
