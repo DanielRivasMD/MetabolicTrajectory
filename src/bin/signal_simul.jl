@@ -1,7 +1,6 @@
 using Random
 using UnicodePlots
 
-# Struct: only holds ranges and sampling setup
 struct SignalParams
   duration::Float64                  # total seconds
   step::Float64                      # time step (1/fs)
@@ -10,7 +9,6 @@ struct SignalParams
   phase_range::Tuple{Float64,Float64}# (min, max phase in radians)
 end
 
-# Generate one sine wave
 function sine_wave(
   amplitude::Float64,
   frequency::Float64,
@@ -24,7 +22,6 @@ function sine_wave(
   return t, y
 end
 
-# Build composite signal: seed + num_components are external
 function build_signal(sp::SignalParams, seed::Int, num_components::Int)
   Random.seed!(seed)
   t = 0:sp.step:sp.duration
@@ -43,34 +40,34 @@ function build_signal(sp::SignalParams, seed::Int, num_components::Int)
   return t, y_total, components
 end
 
-# Example setup: 1000 samples at fs=1000 Hz
-fs = 1000.0
-n = 1000
-duration = n / fs
-step = 1 / fs
+# --- Experiment setup ---
+# Half-day = 12 hours = 43200 seconds
+# Each index = 4.5 minutes = 270 seconds
+duration_half = 12 * 60 * 60   # 12 hours in seconds
+step = 270.0          # 4.5 minutes per index
 
-sp = SignalParams(duration, step, (10.0, 100.0), (1.0, 5.0), (0.0, 2π))
+# Define ranges
+sp = SignalParams(duration_half, step, (0.0001, 0.001), (1.0, 5.0), (0.0, 2π))
 
-# Two reproducible signals with external seed + num_components
-t1, y1, comps1 = build_signal(sp, 1234, 5)
-t2, y2, comps2 = build_signal(sp, 5678, 5)
+# First half-day (seed 111)
+t1, y1, comps1 = build_signal(sp, 111, 10)
+# Second half-day (seed 222)
+t2, y2, comps2 = build_signal(sp, 222, 10)
 
-# Plot
-lineplot(t1, y1; width = 150, title = "Signal 1 (seed=1234)") |> display
-lineplot(t2, y2; width = 150, title = "Signal 2 (seed=5678)") |> display
+# Bind halves into one day
+day_signal1 = vcat(y1, y2)
 
-# Inspect chosen components
-println("Signal 1 components:")
-for c in comps1
-  println(
-    "freq=$(round(c.frequency, digits=2)) Hz, amp=$(round(c.amplitude, digits=2)), phase=$(round(c.phase, digits=2))",
-  )
-end
+# Extrapolate to a week (7 days)
+week_signal1 = repeat(day_signal1, 7)
 
-println("\nSignal 2 components:")
-for c in comps2
-  println(
-    "freq=$(round(c.frequency, digits=2)) Hz, amp=$(round(c.amplitude, digits=2)), phase=$(round(c.phase, digits=2))",
-  )
-end
+# Second week with different seeds
+t3, y3, comps3 = build_signal(sp, 333, 10)
+t4, y4, comps4 = build_signal(sp, 444, 10)
+day_signal2 = vcat(y3, y4)
+week_signal2 = repeat(day_signal2, 7)
 
+# Plot one week
+lineplot(1:length(week_signal1), week_signal1; width = 150, title = "Week Signal 1") |>
+display
+lineplot(1:length(week_signal2), week_signal2; width = 150, title = "Week Signal 2") |>
+display
