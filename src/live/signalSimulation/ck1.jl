@@ -1,7 +1,54 @@
 ####################################################################################################
 
+# Load path definitions
+include(joinpath((pwd() == @__DIR__) ? "src" : "../..", "config", "paths.jl"))
+using .Paths
+Paths.ensure_dirs()
+
+# Load configuration structs
+include(joinpath(Paths.CONFIG, "vars.jl"))
+include(joinpath(Paths.UTIL, "ioDataFrame.jl"))
+include(joinpath(Paths.UTIL, "ioLoadXLSX.jl"))
+
+using Clustering
+using Dates
+using DataFrames
+using Distances
+using DynamicAxisWarping
+using LinearAlgebra
+using Plots
+using Statistics
 using Random
-using UnicodePlots
+using UMAP
+
+# Sigma experiment: one metadata XLSX, three CSV batches
+sigma_params = TrajectoryParams(
+  metadata = Vars.SMETA_xlsx,
+  batches = [Vars.SIG1R_HT_csv, Vars.SIG1R_WT_csv, Vars.KO_WT_csv],
+)
+
+# Load and split
+bundles = load_experiments(sigma_params)
+
+# collect metadata
+# Collect all metadata into one DataFrame
+meta = vcat([b.metadata for b in values(bundles)]...)
+
+# Keep only the columns of interest
+meta = select(meta, [:Animal_nr, :Sex, :Genotype])
+
+# Drop rows where Animal_nr == 0 (if those are placeholders)
+filter!(row -> row.Animal_nr != 0, meta)
+rename!(meta, :Animal_nr => :Animal)
+meta.Group = string.(meta.Sex, "_", meta.Genotype)
+animal_to_group = Dict(row.Animal => row.Group for row in eachrow(meta))
+
+subdfs = split_by_animal(bundles)
+
+####################################################################################################
+
+using Random
+using Plots
 
 struct SignalParams
   duration::Float64                  # total seconds
@@ -68,31 +115,39 @@ t4, y4, comps4 = build_signal(sp, 444, 10)
 day_signal2 = vcat(y3, y4)
 week_signal2 = repeat(day_signal2, 7)
 
+t5, y5, comps5 = build_signal(sp, 555, 1)
+t6, y6, comps6 = build_signal(sp, 666, 1)
+day_signal3 = vcat(y5, y6)
+week_signal3 = repeat(day_signal3, 7)
+
 # Plot one week
-lineplot(1:length(week_signal1), week_signal1; width = 150, title = "Week Signal 1") |>
-display
-lineplot(1:length(week_signal2), week_signal2; width = 150, title = "Week Signal 2") |>
-display
+plt = plot(1:length(week_signal1), week_signal1, title = "Week Signal 1", legend = false)
+display(plt)
+plt = plot(1:length(week_signal2), week_signal2, title = "Week Signal 2", legend = false)
+display(plt)
+plt = plot(1:length(week_signal3), week_signal3, title = "Week Signal 3", legend = false)
+display(plt)
 
 ####################################################################################################
 
 s1 = collect_subsamples(week_signal1, sigma_params)
 s2 = collect_subsamples(week_signal2, sigma_params)
+s3 = collect_subsamples(week_signal3, sigma_params)
 
 # Prefix IDs to distinguish weeks
 s1_ids_prefixed = ["1_" * id for id in s1.ids]
 s2_ids_prefixed = ["2_" * id for id in s2.ids]
+s3_ids_prefixed = ["3_" * id for id in s3.ids]
 
 # Concatenate subsamples and ids
-all_subsamples = vcat(s1.subsamples, s2.subsamples)
-all_ids = vcat(s1_ids_prefixed, s2_ids_prefixed)
+all_subsamples = vcat(s1.subsamples, s2.subsamples, s3.subsamples)
+all_ids = vcat(s1_ids_prefixed, s2_ids_prefixed, s3_ids_prefixed)
 
 # Wrap into dictionary with key :simulation
 subsample_results = Dict(:simulation => (subsamples = all_subsamples, ids = all_ids))
 
 # Example: inspect
 println("Total subsamples: ", length(subsample_results[:simulation].subsamples))
-println("First 5 IDs: ", subsample_results[:simulation].ids[1:5])
 
 order = sortperm(subsample_results[:simulation].ids; by = split_id)
 all_ordered_subsamples = subsample_results[:simulation].subsamples[order]
