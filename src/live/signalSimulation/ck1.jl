@@ -121,6 +121,13 @@ day_signal3 = vcat(y5, y6)
 week_signal3 = repeat(day_signal3, 7)
 
 # Plot one week
+plt = plot(1:(Int(length(week_signal1) / 7)), week_signal1[1:(Int(length(week_signal1) / 7))], title = "Week Signal 1", legend = false)
+display(plt)
+plt = plot(1:(Int(length(week_signal2) / 7)), week_signal2[1:(Int(length(week_signal1) / 7))], title = "Week Signal 2", legend = false)
+display(plt)
+plt = plot(1:(Int(length(week_signal3) / 7)), week_signal3[1:(Int(length(week_signal1) / 7))], title = "Week Signal 3", legend = false)
+display(plt)
+
 plt = plot(1:length(week_signal1), week_signal1, title = "Week Signal 1", legend = false)
 display(plt)
 plt = plot(1:length(week_signal2), week_signal2, title = "Week Signal 2", legend = false)
