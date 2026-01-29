@@ -421,56 +421,83 @@ function histograms_from_dict(d::Dict{Int,Vector{Int}})
 end
 
 ###################################################################################################
+
 using Plots
 using Colors
 
 function plot_grouped_costmatrix(
   cost_matrix::Matrix{Float64},
-  groups::Vector{String};
-  pad::Int = 10,
-  group_colors::Union{Nothing,Vector{<:Colorant}} = nothing,
+  groups::Vector{String},
+  gradient::Vector{Int64};
+  pad::Int = 15,
 )
   N = size(cost_matrix, 1)
   @assert size(cost_matrix, 2) == N "cost_matrix must be square"
   @assert length(groups) == N "groups vector must match matrix size"
+  @assert length(gradient) == N "gradient vector must match matrix size"
 
-  # Map groups to integer codes
-  group_levels = unique(groups)
-  group_to_code = Dict(g => i for (i, g) in enumerate(group_levels))
-  codes = [group_to_code[g] for g in groups]
+  # --- Hardcoded color logic ---
 
-  # Colors per group
-  if group_colors === nothing
-    base = RGB(0.0, 0.5, 0.5)
-    group_colors = distinguishable_colors(length(group_levels), [base])
-  else
-    @assert length(group_colors) == length(group_levels)
+  # Section 1: Sex (F/M)
+  sex_color(g) =
+    occursin("F", g) ? RGB(1, 0, 0) : occursin("M", g) ? RGB(0, 0, 1) : RGB(0.5, 0.5, 0.5)
+
+  # Section 2: Genotype (S1RKO / WT)
+  geno_color(g) =
+    occursin("S1RKO", g) ? RGB(0, 0, 0) :
+    occursin("WT", g) ? RGB(1, 1, 1) : RGB(0.5, 0.5, 0.5)
+
+  # Section 3: Gradient (1–100)
+  gradient_color(v) = begin
+    x = v % 100                     # last two digits
+    x = clamp(x, 1, 100)            # ensure 1–100
+    t = x / 100                     # normalize 0–1
+    RGB(0.2 * (1-t), 0.8 * t, 0.2 * (1-t))  # light green -> dark green
   end
 
-  # --- Build masked matrices ---
+  # --- Build padded matrices ---
   core_only = fill(Float64(NaN), N + pad, N + pad)
-  core_only[pad+1:end, 1:N] .= cost_matrix   # core in bottom-left block
+  core_only[pad+1:end, 1:N] .= cost_matrix
 
   pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
+
+  # Three 5‑pixel sections
+  sec1 = 1:5
+  sec2 = 6:10
+  sec3 = 11:15
+
   for i = 1:N
-    pad_colors[1:pad, i] .= group_colors[codes[i]]        # top strip
-    pad_colors[pad+i, N+1:N+pad] .= group_colors[codes[i]] # right strip
+    g = groups[i]
+    v = gradient[i]
+
+    # Section 1: Sex
+    pad_colors[sec1, i] .= sex_color(g)
+    pad_colors[pad+i, N.+sec1] .= sex_color(g)
+
+    # Section 2: Genotype
+    pad_colors[sec2, i] .= geno_color(g)
+    pad_colors[pad+i, N.+sec2] .= geno_color(g)
+
+    # Section 3: Gradient
+    pad_colors[sec3, i] .= gradient_color(v)
+    pad_colors[pad+i, N.+sec3] .= gradient_color(v)
   end
 
-  # Plot core heatmap with axes disabled
+  # Plot core heatmap
   plt = heatmap(
     core_only;
     color = :inferno,
     yflip = true,
+    size = (800, 700),
     legend = false,
     nan_color = RGBA(0, 0, 0, 0),
-    axis = false,   # remove x/y axes annotations
+    axis = false,
   )
 
-  # Overlay pad colors directly
+  # Overlay padding
   plot!(plt, pad_colors; seriestype = :heatmap, yflip = true, legend = false, axis = false)
 
-  return plt, group_levels, group_colors
+  return plt
 end
 
 using LinearAlgebra
