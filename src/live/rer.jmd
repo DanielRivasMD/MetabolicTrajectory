@@ -1,0 +1,14 @@
+---
+title: "RER analysis"
+author: "Daniel Rivas"
+date: January 30th
+---
+
+```julia; echo = false, results = "hidden"
+include("saturatedSubsampling/config.jl")
+include("saturatedSubsampling/util.jl")
+```
+
+```julia; echo = false
+include("saturatedSubsampling/rer.jl")
+```
