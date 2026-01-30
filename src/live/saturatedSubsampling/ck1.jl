@@ -48,17 +48,18 @@ let
 
   subdfs = split_by_animal(bundles)
 
-  # DOC: hardcoded sigma test
-  sigma_test = [7, 8, 21, 22]
+  # # DOC: hardcoded sigma test
+  # sigma_test = [7, 8, 21, 22]
 
   # Choose variables
   # DOC: hardcoded variables
   vars = names(subdfs[1])[2:end] .|> Symbol
+  # vars = [:RT_RER]
 
   # Collect subsamples for all variables at once
-  # subsample_results = collect_subsamples(subdfs, vars, sigma_params)
-  dfs = Dict(k => subdfs[k] for k in sigma_test)
-  subsample_results = collect_subsamples(dfs, vars, sigma_params)
+  subsample_results = collect_subsamples(subdfs, vars, sigma_params)
+  # dfs = Dict(k => subdfs[k] for k in sigma_test)
+  # subsample_results = collect_subsamples(dfs, vars, sigma_params)
 
   # Now run DTW + clustering for each variable
   for var in vars
@@ -78,25 +79,25 @@ let
       @warn "No subsamples collected for $var, skipping"
     end
 
-    # Choose ~1% at random
-    k = max(1, round(Int, 0.01 * N))
-    idxs = rand(1:N, k)
+    # # Choose ~1% at random
+    # k = max(1, round(Int, 0.01 * N))
+    # idxs = rand(1:N, k)
 
-    # Plot them with fixed y-axis
-    plt = plot(
-      title = "Random 1% subsamples for $var",
-      xlabel = "Time index",
-      ylabel = "Value",
-      legend = false,
-    )
+    # # Plot them with fixed y-axis
+    # plt = plot(
+    #   title = "Random 1% subsamples for $var",
+    #   xlabel = "Time index",
+    #   ylabel = "Value",
+    #   legend = false,
+    # )
 
-    for i in idxs
-      plot!(plt, all_ordered_subsamples[i], alpha = 0.6, lw = 1)
-    end
-    display(plt)
+    # for i in idxs
+    #   plot!(plt, all_ordered_subsamples[i], alpha = 0.6, lw = 1)
+    # end
+    # display(plt)
 
-    ht = histograms_from_dict(group_pairs(all_ordered_ids))
-    display(ht)
+    # ht = histograms_from_dict(group_pairs(all_ordered_ids))
+    # display(ht)
 
     # Compute DTW cost matrix
     cost_matrix = zeros(Float64, N, N)
@@ -112,46 +113,60 @@ let
       end
     end
 
+    using DelimitedFiles
+    using FilePathsBase: mkpath
+
+    # ensure output directory exists
+    outdir = joinpath(pwd(), "csv")
+    mkpath(outdir)
+
+    # build filename using the variable name
+    outfile = joinpath(outdir, string(var, "_cost_matrix.csv"))
+
+    # write the matrix
+    writedlm(outfile, cost_matrix, ',')
+    println("Saved cost matrix for $var → $outfile")
+
     stats = cost_stats(cost_matrix)
     print(stats)
 
-    # Plot cost matrix
-    plt = heatmap(
-      cost_matrix;
-      title = "Clustered DTW Costs — $var",
-      xlabel = "",
-      ylabel = "",
-      colorbar_title = "Cost",
-      size = (800, 700),
-      xticks = false,
-      yticks = false,
-    )
-    display(plt)
+    # # Plot cost matrix
+    # plt = heatmap(
+    #   cost_matrix;
+    #   title = "Clustered DTW Costs — $var",
+    #   xlabel = "",
+    #   ylabel = "",
+    #   colorbar_title = "Cost",
+    #   size = (800, 700),
+    #   xticks = false,
+    #   yticks = false,
+    # )
+    # display(plt)
 
-    plt = plot_grouped_costmatrix(cost_matrix, groups, repeat(collect(1:100), 4))
-    display(plt)
+    # plt = plot_grouped_costmatrix(cost_matrix, groups, repeat(collect(1:100), 4))
+    # display(plt)
 
-    # Hierarchical clustering
-    tree = hclust(cost_matrix; linkage = :ward)
-    leaf_order = tree.order
-    cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
-    groups_ord = groups[leaf_order]
+    # # Hierarchical clustering
+    # tree = hclust(cost_matrix; linkage = :ward)
+    # leaf_order = tree.order
+    # cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
+    # groups_ord = groups[leaf_order]
 
-    # Plot clustered heatmap
-    plt = heatmap(
-      cost_matrix_ord;
-      title = "Clustered DTW Costs — $var",
-      xlabel = "",
-      ylabel = "",
-      colorbar_title = "Cost",
-      size = (800, 700),
-      xticks = false,
-      yticks = false,
-    )
-    display(plt)
+    # # Plot clustered heatmap
+    # plt = heatmap(
+    #   cost_matrix_ord;
+    #   title = "Clustered DTW Costs — $var",
+    #   xlabel = "",
+    #   ylabel = "",
+    #   colorbar_title = "Cost",
+    #   size = (800, 700),
+    #   xticks = false,
+    #   yticks = false,
+    # )
+    # display(plt)
 
-    plt = plot_grouped_costmatrix(cost_matrix_ord, groups_ord, leaf_order)
-    display(plt)
+    # plt = plot_grouped_costmatrix(cost_matrix_ord, groups_ord, leaf_order)
+    # display(plt)
 
   end
 
