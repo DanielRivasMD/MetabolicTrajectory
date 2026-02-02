@@ -245,52 +245,52 @@ end
 
 ###################################################################################################
 
-function group_pairs(v::Vector{String})
-  d = Dict{Int,Vector{Int}}()
+# function group_pairs(v::Vector{String})
+#   d = Dict{Int,Vector{Int}}()
 
-  for s in v
-    parts = split(s, "_")
-    @assert length(parts) == 2 "String '$s' must contain exactly one '_'"
+#   for s in v
+#     parts = split(s, "_")
+#     @assert length(parts) == 2 "String '$s' must contain exactly one '_'"
 
-    key = parse(Int, parts[1])
-    val = parse(Int, parts[2])
+#     key = parse(Int, parts[1])
+#     val = parse(Int, parts[2])
 
-    if !haskey(d, key)
-      d[key] = Int[]
-    end
+#     if !haskey(d, key)
+#       d[key] = Int[]
+#     end
 
-    push!(d[key], val)
-  end
+#     push!(d[key], val)
+#   end
 
-  return d
-end
+#   return d
+# end
 
-using Plots
+# using Plots
 
-function histograms_from_dict(d::Dict{Int,Vector{Int}})
-  keys_sorted = sort(collect(keys(d)))
+# function histograms_from_dict(d::Dict{Int,Vector{Int}})
+#   keys_sorted = sort(collect(keys(d)))
 
-  # one subplot per key
-  n = length(keys_sorted)
-  plt = plot(layout = (n, 1), size = (600, 200 * n))
+#   # one subplot per key
+#   n = length(keys_sorted)
+#   plt = plot(layout = (n, 1), size = (600, 200 * n))
 
-  for (i, k) in enumerate(keys_sorted)
-    vals = d[k]
+#   for (i, k) in enumerate(keys_sorted)
+#     vals = d[k]
 
-    histogram!(
-      plt[i],
-      vals;
-      bins = :auto,
-      title = "Key = $k",
-      xlabel = "Values",
-      ylabel = "Count",
-      legend = false,
-      color = :steelblue,
-    )
-  end
+#     histogram!(
+#       plt[i],
+#       vals;
+#       bins = :auto,
+#       title = "Key = $k",
+#       xlabel = "Values",
+#       ylabel = "Count",
+#       legend = false,
+#       color = :steelblue,
+#     )
+#   end
 
-  return plt
-end
+#   return plt
+# end
 
 ###################################################################################################
 
