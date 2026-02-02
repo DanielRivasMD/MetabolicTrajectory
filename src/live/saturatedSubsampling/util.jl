@@ -299,63 +299,69 @@ using Colors
 
 function plot_grouped_costmatrix(
   cost_matrix::Matrix{Float64},
-  groups::Vector{String},
-  gradient::Vector{Int64};
+  ids::Vector{SubSampleID},
+  meta::DataFrame;
   pad::Int = 15,
 )
   N = size(cost_matrix, 1)
-  @assert size(cost_matrix, 2) == N "cost_matrix must be square"
-  @assert length(groups) == N "groups vector must match matrix size"
-  @assert length(gradient) == N "gradient vector must match matrix size"
+  @assert size(cost_matrix, 2) == N
+  @assert length(ids) == N
 
-  # --- Hardcoded color logic ---
+  # metadata lookup
+  sex_lookup = Dict(row.Animal => row.Sex for row in eachrow(meta))
+  genotype_lookup = Dict(row.Animal => row.Genotype for row in eachrow(meta))
 
-  # Section 1: Sex (F/M)
-  sex_color(g) =
-    occursin("F", g) ? RGB(1, 0, 0) : occursin("M", g) ? RGB(0, 0, 1) : RGB(0.5, 0.5, 0.5)
+  # gradient from normalized midpoint of each subsample
+  start_idxs = first.(getfield.(ids, :ixs))
+  end_idxs = last.(getfield.(ids, :ixs))
+  midpoints = (start_idxs .+ end_idxs) ./ 2
 
-  # Section 2: Genotype (S1RKO / WT)
+  # normalize midpoints to 1–100
+  max_end = maximum(end_idxs)
+  gradient = round.(Int, 100 .* midpoints ./ max_end)
+
+  # color logic
+  sex_color(sex) =
+    sex == "F" ? RGB(1, 0, 0) : sex == "M" ? RGB(0, 0, 1) : RGB(0.5, 0.5, 0.5)
+
   geno_color(g) =
-    occursin("S1RKO", g) ? RGB(0, 0, 0) :
-    occursin("WT", g) ? RGB(1, 1, 1) : RGB(0.5, 0.5, 0.5)
+    g == "S1RKO" ? RGB(0, 0, 0) : g == "WT" ? RGB(1, 1, 1) : RGB(0.5, 0.5, 0.5)
 
-  # Section 3: Gradient (1–100)
   gradient_color(v) = begin
-    x = v % 100                     # last two digits
-    x = clamp(x, 1, 100)            # ensure 1–100
-    t = x / 100                     # normalize 0–1
-    RGB(0.2 * (1-t), 0.8 * t, 0.2 * (1-t))  # light green -> dark green
+    x = clamp(v % 100, 1, 100)
+    t = x / 100
+    RGB(0.2 * (1 - t), 0.8 * t, 0.2 * (1 - t))
   end
 
-  # --- Build padded matrices ---
+  # padded matrices (no reordering)
   core_only = fill(Float64(NaN), N + pad, N + pad)
   core_only[pad+1:end, 1:N] .= cost_matrix
 
   pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
 
-  # Three 5‑pixel sections
   sec1 = 1:5
   sec2 = 6:10
   sec3 = 11:15
 
   for i = 1:N
-    g = groups[i]
+    subject = ids[i].subject
+    sex = sex_lookup[subject]
+    geno = genotype_lookup[subject]
     v = gradient[i]
 
     # Section 1: Sex
-    pad_colors[sec1, i] .= sex_color(g)
-    pad_colors[pad+i, N.+sec1] .= sex_color(g)
+    pad_colors[sec1, i] .= sex_color(sex)
+    pad_colors[pad+i, N.+sec1] .= sex_color(sex)
 
     # Section 2: Genotype
-    pad_colors[sec2, i] .= geno_color(g)
-    pad_colors[pad+i, N.+sec2] .= geno_color(g)
+    pad_colors[sec2, i] .= geno_color(geno)
+    pad_colors[pad+i, N.+sec2] .= geno_color(geno)
 
     # Section 3: Gradient
     pad_colors[sec3, i] .= gradient_color(v)
     pad_colors[pad+i, N.+sec3] .= gradient_color(v)
   end
 
-  # Plot core heatmap
   plt = heatmap(
     core_only;
     color = :inferno,
@@ -366,7 +372,6 @@ function plot_grouped_costmatrix(
     axis = false,
   )
 
-  # Overlay padding
   plot!(plt, pad_colors; seriestype = :heatmap, yflip = true, legend = false, axis = false)
 
   return plt
