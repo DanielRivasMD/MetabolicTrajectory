@@ -221,29 +221,14 @@ end
 
 ###################################################################################################
 
-"""
-    collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
-
-Extract contiguous subsamples from a single signal vector according to `params`.
-
-- **Reference length** is the length of the signal itself.
-- **`params.subsample_len`**:
-  - If `0 < subsample_len < 1`, interpreted as a fraction of the signal length.
-  - If `subsample_len >= 1`, interpreted as an absolute number of indices.
-- **`params.subsample_var`** applies ±variance jitter to the subsample length.
-- **`params.nsamples`** controls how many subsamples to draw.
-
-Each subsample is a contiguous slice of the signal, chosen at a random starting index,
-with length jittered around the target subsample length.
-
-Returns a named tuple:
-- `subsamples::Vector{Vector{Float64}}` — the collected subsample vectors
-- `ids::Vector{String}` — identifiers of the form `"startIndex"`
-"""
-function collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
+function collect_subsamples(
+  signal::Vector{Float64},
+  times::Vector{DateTime},
+  params::TrajectoryParams,
+)
   n = length(signal)
   if n == 0
-    return (subsamples = Vector{Vector{Float64}}(), ids = String[])
+    return SubSampleContainer(Vector{Float64}[], SubSampleID[])
   end
 
   # Determine base subsample length
@@ -254,10 +239,10 @@ function collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
   end
 
   subsamples = Vector{Vector{Float64}}()
-  ids = String[]
+  ids = Vector{SubSampleID}()
 
-  for i = 1:params.nsamples
-    # Apply variance jitter
+  for _ = 1:params.nsamples
+    # jitter
     len_var = round(
       Int,
       subsample_len * (1 + (rand() * params.subsample_var * 2 - params.subsample_var)),
@@ -269,69 +254,53 @@ function collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
     end
 
     start_idx = rand(1:(n-len_var))
-    subsample = signal[start_idx:start_idx+len_var-1]
+    end_idx = start_idx + len_var - 1
 
-    push!(subsamples, subsample)
-    push!(ids, string(start_idx))
+    push!(subsamples, signal[start_idx:end_idx])
+
+    push!(ids, SubSampleID(
+      -1,
+      (start_idx, end_idx),
+      (times[start_idx], times[end_idx]),
+    ))
   end
 
-  return (subsamples = subsamples, ids = ids)
+  return SubSampleContainer(subsamples, ids)
 end
 
-
-"""
-    collect_subsamples(subdfs::Dict{Int,DataFrame}, var::Symbol, params::TrajectoryParams)
-
-Collect subsamples from a single variable across all animals according to parameters in `params`.
-
-- **Reference length** is the maximum number of rows across all animals in `subdfs`.
-- Delegates to `collect_subsamples(signal, params)` for each animal’s signal vector.
-- Each subsample is tagged with `"animalID_startIndex"`.
-
-Returns a named tuple:
-- `subsamples::Vector{Vector{Float64}}`
-- `ids::Vector{String}`
-"""
 function collect_subsamples(
   subdfs::Dict{Int,DataFrame},
   var::Symbol,
   params::TrajectoryParams,
 )
-  max_rows = maximum(nrow(df) for df in values(subdfs))
   basevar = Symbol(replace(string(var), r"_\d+$" => ""))
 
   all_subsamples = Vector{Vector{Float64}}()
-  all_ids = String[]
+  all_ids = Vector{SubSampleID}()
 
   for (animal_id, subdf) in subdfs
     signal = collect(skipmissing(subdf[!, basevar]))
+    times = collect(skipmissing(subdf[!, :Date_Time]))
+
     if isempty(signal)
       @warn "Animal $animal_id has no valid data for $basevar, skipping"
       continue
     end
 
-    # Use the vector-based function
-    result = collect_subsamples(signal, params)
+    result = collect_subsamples(signal, times, params)
+
     append!(all_subsamples, result.subsamples)
-    # Prefix IDs with animal_id
-    append!(all_ids, [string(animal_id, "_", id) for id in result.ids])
+
+    # update subject ID
+    for id in result.ids
+      push!(all_ids, SubSampleID(Int32(animal_id), id.ixs, id.time))
+    end
   end
 
-  return (subsamples = all_subsamples, ids = all_ids)
+  return SubSampleContainer(all_subsamples, all_ids)
 end
 
 
-"""
-    collect_subsamples(subdfs::Dict{Int,DataFrame}, vars::Vector{Symbol}, params::TrajectoryParams)
-
-Collect subsamples for multiple variables by delegating to
-`collect_subsamples(subdfs, var, params)` for each variable.
-
-Returns a dictionary keyed by normalized variable symbol (suffix `_N` stripped).
-Each value is a named tuple:
-- `subsamples::Vector{Vector{Float64}}`
-- `ids::Vector{String}`
-"""
 function collect_subsamples(
   subdfs::Dict{Int,DataFrame},
   vars::Vector{Symbol},
