@@ -133,6 +133,20 @@ end
 
 ###################################################################################################
 
+# using DelimitedFiles
+
+# # ensure output directory exists
+# outdir = joinpath(pwd(), "csv")
+
+# # build filename using the variable name
+# outfile = joinpath(outdir, string(var, "_cost_matrix.csv"))
+
+# # write the matrix
+# writedlm(outfile, cost_matrix, ',')
+# println("Saved cost matrix for $var → $outfile")
+
+###################################################################################################
+
 function collect_subsamples(
   signal::Vector{Float64},
   times::Vector{DateTime},
