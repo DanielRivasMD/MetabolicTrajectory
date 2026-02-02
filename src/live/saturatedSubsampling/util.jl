@@ -301,7 +301,7 @@ function plot_grouped_costmatrix(
   cost_matrix::Matrix{Float64},
   ids::Vector{SubSampleID},
   meta::DataFrame;
-  pad::Int = 15,
+  pad::Int = 20,
 )
   N = size(cost_matrix, 1)
   @assert size(cost_matrix, 2) == N
@@ -311,16 +311,14 @@ function plot_grouped_costmatrix(
   sex_lookup = Dict(row.Animal => row.Sex for row in eachrow(meta))
   genotype_lookup = Dict(row.Animal => row.Genotype for row in eachrow(meta))
 
-  # gradient from normalized midpoint of each subsample
+  # Gradient from normalized midpoint
   start_idxs = first.(getfield.(ids, :ixs))
   end_idxs = last.(getfield.(ids, :ixs))
   midpoints = (start_idxs .+ end_idxs) ./ 2
-
-  # normalize midpoints to 1–100
   max_end = maximum(end_idxs)
   gradient = round.(Int, 100 .* midpoints ./ max_end)
 
-  # color logic
+  # Color logic
   sex_color(sex) =
     sex == "F" ? RGB(1, 0, 0) : sex == "M" ? RGB(0, 0, 1) : RGB(0.5, 0.5, 0.5)
 
@@ -333,21 +331,43 @@ function plot_grouped_costmatrix(
     RGB(0.2 * (1 - t), 0.8 * t, 0.2 * (1 - t))
   end
 
-  # padded matrices (no reordering)
+  # Time cycle logic
+  function time_cycle_color(tstart::DateTime, tend::DateTime)
+    # day = 06:00–18:00
+    is_day(h) = 6 <= h < 18
+
+    # midpoint determines majority
+    midpoint = tstart + (tend - tstart) ÷ 2
+    mid_is_day = is_day(hour(midpoint))
+
+    if mid_is_day
+      return RGB(1.0, 1.0, 0.0)   # bright yellow = day
+    else
+      return RGB(0.6, 0.6, 0.0)   # dark yellow = night
+    end
+  end
+
+  # padded matrices
   core_only = fill(Float64(NaN), N + pad, N + pad)
   core_only[pad+1:end, 1:N] .= cost_matrix
 
   pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
 
-  sec1 = 1:5
-  sec2 = 6:10
-  sec3 = 11:15
+  # sections
+  sec1 = 1:5      # sex
+  sec2 = 6:10     # genotype
+  sec3 = 11:15    # gradient
+  sec4 = 16:20    # time cycle
 
   for i = 1:N
     subject = ids[i].subject
     sex = sex_lookup[subject]
     geno = genotype_lookup[subject]
     v = gradient[i]
+
+    # time cycle
+    tstart, tend = ids[i].time
+    tcolor = time_cycle_color(tstart, tend)
 
     # Section 1: Sex
     pad_colors[sec1, i] .= sex_color(sex)
@@ -360,6 +380,10 @@ function plot_grouped_costmatrix(
     # Section 3: Gradient
     pad_colors[sec3, i] .= gradient_color(v)
     pad_colors[pad+i, N.+sec3] .= gradient_color(v)
+
+    # Section 4: Time cycle
+    pad_colors[sec4, i] .= tcolor
+    pad_colors[pad+i, N.+sec4] .= tcolor
   end
 
   plt = heatmap(
