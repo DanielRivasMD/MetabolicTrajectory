@@ -9,32 +9,6 @@ using XLSX
 
 ####################################################################################################
 
-
-"""
-    load_experiments(p::TrajectoryParams)
-
-Load experiments described in an XLSX file (from `p.metadata`) and
-corresponding CSV batches (from `p.batches`).
-
-Processing steps:
-
-- **Sheet selection**: Each sheet in the XLSX is inspected; the sheet name must
-  contain a date in `YYYY-MM-DD` format, which is used as the experiment key.
-- **Metadata normalization**:
-  - `Cage_nr` → cast to `Int`.
-  - `Animal_nr` → replace `"EMPTY"` with `0`, then cast to `Int`.
-  - `Sex` and `Genotype` → replace `"EMPTY"` with `""`, then cast to `String`.
-- **Experiment normalization**:
-  - Columns listed in `Vars.xvars_csv` are parsed as `DateTime` using the
-    format `"mm/dd/yyyy HH:MM:SS"`.
-  - All other columns are cast to `Float64`.
-- **Matching**: The extracted date key is matched against the provided CSV
-  batch filenames to locate the corresponding experiment data.
-- **Output**: Returns a `Dict{String,ExperimentBundle}` keyed by the date string,
-  where each `ExperimentBundle` contains the cleaned `metadata::DataFrame` and
-  `experiment::DataFrame`.
-"""
-
 function load_experiments(params::TrajectoryParams)
   bundles = Dict{String,ExperimentBundle}()
 
@@ -98,17 +72,6 @@ end
 
 ####################################################################################################
 
-"""
-    split_by_animal(bundle::ExperimentBundle; timecol::Symbol = :Date_Time)
-
-Split the experiment DataFrame in `bundle` into per‑animal DataFrames.
-
-- Uses suffixes in column names (e.g. `_1`, `_2`) to group signals.
-- Renames columns to strip suffixes.
-- Keys the output dictionary by the `Animal_nr` values from `bundle.metadata`,
-  instead of the raw suffix index.
-- Ignores animals with `Animal_nr == 0`.
-"""
 function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = :Date_Time)
   df = bundle.experiment
   meta = bundle.metadata
@@ -149,15 +112,6 @@ function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = :Date_Time)
   return subdfs
 end
 
-"""
-    split_by_animal(bundles::Dict{String,ExperimentBundle}; timecol::Symbol = :Date_Time)
-
-Split all experiment DataFrames in `bundles` into per‑animal DataFrames.
-
-- Calls `split_by_animal(bundle)` on each entry.
-- Consolidates into a single dictionary keyed by `animal_nr`.
-- Ignores animals with `Animal_nr == 0`.
-"""
 function split_by_animal(
   bundles::Dict{String,ExperimentBundle};
   timecol::Symbol = :Date_Time,
