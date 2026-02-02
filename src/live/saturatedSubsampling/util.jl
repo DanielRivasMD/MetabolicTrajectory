@@ -184,11 +184,7 @@ function collect_subsamples(
 
     push!(subsamples, signal[start_idx:end_idx])
 
-    push!(ids, SubSampleID(
-      -1,
-      (start_idx, end_idx),
-      (times[start_idx], times[end_idx]),
-    ))
+    push!(ids, SubSampleID(-1, (start_idx, end_idx), (times[start_idx], times[end_idx])))
   end
 
   return SubSampleContainer(subsamples, ids)
@@ -237,19 +233,6 @@ end
 
 ###################################################################################################
 
-
-"""
-    cost_stats(A)
-
-Compute basic statistics of a cost matrix (or any array):
-- minimum
-- maximum
-- mean
-- median
-- standard deviation
-
-Returns a NamedTuple.
-"""
 function cost_stats(A)
   return (
     min = minimum(A),
