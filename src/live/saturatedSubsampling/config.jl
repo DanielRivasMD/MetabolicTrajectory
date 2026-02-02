@@ -1,6 +1,7 @@
 ####################################################################################################
 
 using DataFrames
+using Dates
 using Parameters: @with_kw
 
 ####################################################################################################
@@ -15,6 +16,19 @@ Container for a single experiment, holding:
 struct ExperimentBundle
   metadata::DataFrame
   experiment::DataFrame
+end
+
+####################################################################################################
+
+struct SubSampleID
+  subject::Int
+  ixs::Tuple{Int,Int}
+  time::Tuple{DateTime,DateTime}
+end
+
+struct SubSampleContainer
+  subsamples::Vector{Vector{Float64}}
+  ids::Vector{SubSampleID}
 end
 
 ####################################################################################################
