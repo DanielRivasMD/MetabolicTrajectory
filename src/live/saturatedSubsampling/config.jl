@@ -31,7 +31,7 @@ end
   batches::Vector{String}
   nsamples::Int = 100
   subsample_len::Float64 = 0.075
-  subsample_var::Float64 = 0.0
+  subsample_var::Float64 = 0.005
 end
 
 ####################################################################################################
