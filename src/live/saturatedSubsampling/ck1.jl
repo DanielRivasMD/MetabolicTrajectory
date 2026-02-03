@@ -19,9 +19,7 @@ using Dates
 using DataFrames
 using Distances
 using DynamicAxisWarping
-using LinearAlgebra
 using Plots
-using Statistics
 using Random
 
 @info "dependencies loaded"
@@ -95,8 +93,15 @@ for var in vars
   # ht = histograms_from_dict(group_pairs(all_ordered_ids))
   # display(ht)
 
+  cost_path = joinpath(Paths.TMP, string(var, "_cost_matrix.csv"))
+  ids_path = joinpath(Paths.TMP, string(var, "_order_ids.csv"))
+
+  @info "Computing DTW cost matrix for $var"
+
   # Compute DTW cost matrix
+  N = length(all_ordered_subsamples)
   cost_matrix = zeros(Float64, N, N)
+
   for i = 1:N
     for j = i:N
       cost, _, _ = dtw(all_ordered_subsamples[i], all_ordered_subsamples[j], SqEuclidean())
@@ -107,9 +112,9 @@ for var in vars
     end
   end
 
-  # save calculations
-  writedlm(joinpath(Paths.TMP, string(var, "_cost_matrix.csv")), cost_matrix, ',')
-  writedf(joinpath(Paths.TMP, string(var, "_order_ids.csv")), ids_to_dataframe(all_ordered_ids))
+  # Save results
+  writedlm(cost_path, cost_matrix, ',')
+  writedf(ids_path, ids_to_dataframe(all_ordered_ids))
 
   # stats = cost_stats(cost_matrix)
   # print(stats)
