@@ -3,9 +3,37 @@
 using Colors
 using DataFrames
 using Dates
+using DelimitedFiles
 using Plots
 using Statistics
 using XLSX
+
+####################################################################################################
+
+function ids_to_dataframe(ids::Vector{SubSampleID})
+  return DataFrame(
+    subject = getfield.(ids, :subject),
+    start_idx = first.(getfield.(ids, :ixs)),
+    end_idx = last.(getfield.(ids, :ixs)),
+    start_time = first.(getfield.(ids, :time)),
+    end_time = last.(getfield.(ids, :time)),
+  )
+end
+
+function dataframe_to_ids(df::DataFrame)
+  ids = SubSampleID[]
+  for row in eachrow(df)
+    push!(
+      ids,
+      SubSampleID(
+        Int(row.subject),
+        (Int(row.start_idx), Int(row.end_idx)),
+        (DateTime(row.start_time), DateTime(row.end_time)),
+      ),
+    )
+  end
+  return ids
+end
 
 ####################################################################################################
 
@@ -133,19 +161,6 @@ end
 
 ###################################################################################################
 
-# using DelimitedFiles
-
-# # ensure output directory exists
-# outdir = joinpath(pwd(), "csv")
-
-# # build filename using the variable name
-# outfile = joinpath(outdir, string(var, "_cost_matrix.csv"))
-
-# # write the matrix
-# writedlm(outfile, cost_matrix, ',')
-# println("Saved cost matrix for $var → $outfile")
-
-###################################################################################################
 
 function collect_subsamples(
   signal::Vector{Float64},
