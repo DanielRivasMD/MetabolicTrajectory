@@ -5,6 +5,9 @@ module Paths
 "project"
 const PROJECT = normpath(joinpath(@__DIR__, "..", ".."))
 
+# tmp csv
+const TMP = joinpath(PROJECT, "tmp")
+
 "data"
 const DATA = joinpath(PROJECT, "data")
 const SIGMA = joinpath(DATA, "sigma")
