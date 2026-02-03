@@ -317,6 +317,7 @@ function plot_grouped_costmatrix(
   ids::Vector{SubSampleID},
   meta::DataFrame;
   pad::Int = 20,
+  title::String = "",
 )
   N = size(cost_matrix, 1)
   @assert size(cost_matrix, 2) == N
@@ -348,18 +349,10 @@ function plot_grouped_costmatrix(
 
   # Time cycle logic
   function time_cycle_color(tstart::DateTime, tend::DateTime)
-    # day = 06:00–18:00
     is_day(h) = 6 <= h < 18
-
-    # midpoint determines majority
     midpoint = tstart + (tend - tstart) ÷ 2
     mid_is_day = is_day(hour(midpoint))
-
-    if mid_is_day
-      return RGB(1.0, 1.0, 0.0)   # bright yellow = day
-    else
-      return RGB(0.6, 0.6, 0.0)   # dark yellow = night
-    end
+    mid_is_day ? RGB(1.0, 1.0, 0.0) : RGB(0.6, 0.6, 0.0)
   end
 
   # padded matrices
@@ -368,11 +361,15 @@ function plot_grouped_costmatrix(
 
   pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
 
-  # sections
-  sec1 = 1:5      # sex
-  sec2 = 6:10     # genotype
-  sec3 = 11:15    # gradient
-  sec4 = 16:20    # time cycle
+  # Dynamic section indexing
+  # pad is divided into 4 equal blocks
+  block = pad ÷ 4
+  @assert block ≥ 1 "pad must be at least 4"
+
+  sec1 = 1:block
+  sec2 = block+1:2block
+  sec3 = 2block+1:3block
+  sec4 = 3block+1:4block   # up to pad
 
   for i = 1:N
     subject = ids[i].subject
@@ -380,7 +377,6 @@ function plot_grouped_costmatrix(
     geno = genotype_lookup[subject]
     v = gradient[i]
 
-    # time cycle
     tstart, tend = ids[i].time
     tcolor = time_cycle_color(tstart, tend)
 
@@ -403,6 +399,7 @@ function plot_grouped_costmatrix(
 
   plt = heatmap(
     core_only;
+    title = title,
     color = :inferno,
     yflip = true,
     size = (800, 700),
