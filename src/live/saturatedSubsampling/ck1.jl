@@ -2,12 +2,8 @@
 # include("src/live/saturatedSubsampling/config.jl")
 # include("src/live/saturatedSubsampling/util.jl")
 
-# include("config.jl")
-# include("util.jl")
-
 # Load path definitions
 include(joinpath((pwd() == @__DIR__) ? "src" : "../..", "config", "paths.jl"))
-# include("../../config/paths.jl")
 using .Paths
 Paths.ensure_dirs()
 
@@ -51,19 +47,16 @@ rename!(meta, :Animal_nr => :Animal)
 
 subdfs = split_by_animal(bundles)
 
-# DOC: hardcoded sigma test
-sigma_test = [7, 8, 21, 22]
-
 # Choose variables
-# DOC: hardcoded variables
 vars = names(subdfs[1])[2:end] .|> Symbol
 # vars = [:RT_RER]
 
-# # Collect subsamples for all variables at once
-# subsample_results = collect_subsamples(subdfs, vars, sigma_params)
+# Collect subsamples for all variables at once
+subsample_results = collect_subsamples(subdfs, vars, sigma_params)
 
-dfs = Dict(k => subdfs[k] for k in sigma_test)
-subsample_results = collect_subsamples(dfs, vars, sigma_params)
+# sigma_test = [7, 8, 21, 22]
+# dfs = Dict(k => subdfs[k] for k in sigma_test)
+# subsample_results = collect_subsamples(dfs, vars, sigma_params)
 
 @info "bundle loaded"
 
@@ -82,13 +75,13 @@ for var in vars
     @warn "No subsamples collected for $var, skipping"
   end
 
-  # Choose ~1% at random
-  k = max(1, round(Int, 0.01 * N))
+  # Choose ~10% at random
+  k = max(1, round(Int, 0.1 * N))
   idxs = rand(1:N, k)
 
   # Plot them with fixed y-axis
   plt = plot(
-    title = "Random 1% subsamples for $var",
+    title = "Random 10% subsamples for $var",
     xlabel = "Time index",
     ylabel = "Value",
     legend = false,
@@ -114,22 +107,26 @@ for var in vars
     end
   end
 
-  stats = cost_stats(cost_matrix)
-  print(stats)
+  # save calculations
+  writedlm(joinpath(Paths.TMP, string(var, "_cost_matrix.csv")), cost_matrix, ',')
+  writedf(joinpath(Paths.TMP, string(var, "_order_ids.csv")), ids_to_dataframe(all_ordered_ids))
 
-  # Plot cost matrix
-  plt = heatmap(
-    cost_matrix;
-    title = "Clustered DTW Costs — $var",
-    xlabel = "",
-    ylabel = "",
-    colorbar_title = "Cost",
-    size = (800, 700),
-    xticks = false,
-    yticks = false,
-    yflip = true,
-  )
-  display(plt)
+  # stats = cost_stats(cost_matrix)
+  # print(stats)
+
+  # # Plot cost matrix
+  # plt = heatmap(
+  #   cost_matrix;
+  #   title = "Clustered DTW Costs — $var",
+  #   xlabel = "",
+  #   ylabel = "",
+  #   colorbar_title = "Cost",
+  #   size = (800, 700),
+  #   xticks = false,
+  #   yticks = false,
+  #   yflip = true,
+  # )
+  # display(plt)
 
   plt = plot_grouped_costmatrix(cost_matrix, all_ordered_ids, meta;)
   display(plt)
@@ -137,21 +134,25 @@ for var in vars
   # Hierarchical clustering
   tree = hclust(cost_matrix; linkage = :ward)
 
-  # Plot cost matrix
-  plt = heatmap(
-    cost_matrix[tree.order, tree.order];
-    title = "Clustered DTW Costs — $var",
-    xlabel = "",
-    ylabel = "",
-    colorbar_title = "Cost",
-    size = (800, 700),
-    xticks = false,
-    yticks = false,
-    yflip = true,
-  )
-  display(plt)
+  # # Plot cost matrix
+  # plt = heatmap(
+  #   cost_matrix[tree.order, tree.order];
+  #   title = "Clustered DTW Costs — $var",
+  #   xlabel = "",
+  #   ylabel = "",
+  #   colorbar_title = "Cost",
+  #   size = (800, 700),
+  #   xticks = false,
+  #   yticks = false,
+  #   yflip = true,
+  # )
+  # display(plt)
 
-  plt = plot_grouped_costmatrix(cost_matrix[tree.order, tree.order], all_ordered_ids[tree.order], meta;)
+  plt = plot_grouped_costmatrix(
+    cost_matrix[tree.order, tree.order],
+    all_ordered_ids[tree.order],
+    meta;
+  )
   display(plt)
 
 end
