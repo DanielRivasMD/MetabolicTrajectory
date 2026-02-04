@@ -10,49 +10,6 @@ using XLSX
 ####################################################################################################
 
 """
-    compare_columns(df::DataFrame, subdf::DataFrame; drop=String[])
-
-Compare column names between the original `df` and a suffix‑stripped `subdf`.
-
-- Strips trailing `_N` suffixes from `df` column names.
-- Normalizes both sides to `Symbol` for consistent comparison.
-- Optionally drops metadata columns via `drop`.
-
-Prints the columns only in `df` (after stripping) and only in `subdf`.
-"""
-function compare_columns(df::DataFrame, subdf::DataFrame; drop = String[])
-  # Normalize df names: strip suffixes and convert to Symbol
-  df_base_syms = unique(Symbol.(replace.(String.(names(df)), r"_\d+$" => "")))
-  # Drop metadata columns if requested
-  df_base_syms = setdiff(df_base_syms, Symbol.(drop))
-
-  # Normalize subdf names to Symbol
-  sub_syms = Symbol.(names(subdf))
-
-  # Differences
-  only_in_df = [c for c in df_base_syms if c ∉ sub_syms]
-  only_in_subdf = [c for c in sub_syms if c ∉ df_base_syms]
-
-  return (; only_in_df, only_in_subdf)
-end
-
-"""
-    compare_columns(df::DataFrame, subdfs::Dict{Int,DataFrame}; drop=String[])
-
-Compare column names between the original `df` and each suffix‑stripped subdf in `subdfs`.
-Returns a Dict keyed by animal ID with the differences.
-"""
-function compare_columns(df::DataFrame, subdfs::Dict{Int,DataFrame}; drop = String[])
-  results = Dict{Int,NamedTuple}()
-  for (id, subdf) in subdfs
-    results[id] = compare_columns(df, subdf; drop = drop)
-  end
-  return results
-end
-
-####################################################################################################
-
-"""
     load_experiments(p::TrajectoryParams)
 
 Load experiments described in an XLSX file (from `p.metadata`) and
