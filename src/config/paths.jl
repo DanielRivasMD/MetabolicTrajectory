@@ -27,6 +27,7 @@ const SRC = joinpath(PROJECT, "src")
 const BIN = joinpath(SRC, "bin")
 const CONFIG = joinpath(SRC, "config")
 const LIVE = joinpath(SRC, "live")
+const PIPE = joinpath(SRC, "pipe")
 const UTIL = joinpath(SRC, "util")
 
 "Ensure directories exist (for outputs)"
