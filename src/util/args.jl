@@ -9,14 +9,20 @@ const HELP =
 
 ####################################################################################################
 
-"Convert struct fields to a Dict with Symbol keys"
 function struct_to_dict(x)
-  Dict(name => getfield(x, name) for name in propertynames(x))
+  d = Dict{Symbol,Any}()
+  for name in propertynames(x)
+    d[name] = getfield(x, name)
+  end
+  return d
 end
 
-"Convert Dict with String keys (from TOML) into Dict with Symbol keys"
 function symbolise_keys(d::Dict)
-  Dict(Symbol(k) => v for (k, v) in d)
+  out = Dict{Symbol,Any}()
+  for (k, v) in d
+    out[Symbol(k)] = v
+  end
+  return out
 end
 
 ####################################################################################################
