@@ -1,11 +1,8 @@
 ###################################################################################################
 
-# load packages
-begin
-  using DataFrames
-  using DelimitedFiles
-  using XLSX
-end;
+using DataFrames
+using DelimitedFiles
+using XLSX
 
 ###################################################################################################
 
