@@ -10,6 +10,30 @@ using XLSX
 
 ####################################################################################################
 
+using Parameters: @with_kw
+
+####################################################################################################
+
+struct ExperimentBundle
+  metadata::DataFrame
+  experiment::DataFrame
+end
+
+####################################################################################################
+
+struct SubSampleID
+  subject::Int
+  ixs::Tuple{Int,Int}
+  time::Tuple{DateTime,DateTime}
+end
+
+struct SubSampleContainer
+  subsamples::Vector{Vector{Float64}}
+  ids::Vector{SubSampleID}
+end
+
+####################################################################################################
+
 function ids_to_dataframe(ids::Vector{SubSampleID})
   return DataFrame(
     subject = getfield.(ids, :subject),
@@ -161,12 +185,14 @@ end
 
 ###################################################################################################
 
-
 function collect_subsamples(
   signal::Vector{Float64},
   times::Vector{DateTime},
   params::TrajectoryParams,
 )
+  if params.sample != (0, 0)
+    signal = signal[params.sample[1]:params.sample[2]]
+  end
   n = length(signal)
   if n == 0
     return SubSampleContainer(Vector{Float64}[], SubSampleID[])
