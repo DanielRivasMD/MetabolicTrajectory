@@ -12,18 +12,6 @@ include(joinpath(Paths.CONFIG, "vars.jl"))
 include(joinpath(Paths.UTIL, "ioDataFrame.jl"))
 include(joinpath(Paths.UTIL, "ioLoadXLSX.jl"))
 
-@info "paths loaded"
-
-using Clustering
-using Dates
-using DataFrames
-using Distances
-using DynamicAxisWarping
-using Plots
-using Random
-
-@info "dependencies loaded"
-
 # Sigma experiment: one metadata XLSX, three CSV batches
 sigma_params = TrajectoryParams(
   metadata = Vars.SMETA_xlsx,

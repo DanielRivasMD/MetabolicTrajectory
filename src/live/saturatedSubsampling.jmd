@@ -20,6 +20,6 @@ whole recording 2200 indexes
 
 
 ```julia; echo = false
-# include("saturatedSubsampling/ck1.jl")
-include("saturatedSubsampling/ck2.jl")
+include("saturatedSubsampling/ck1.jl")
+# include("saturatedSubsampling/ck2.jl")
 ```
