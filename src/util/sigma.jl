@@ -1,5 +1,45 @@
 ####################################################################################################
 
+struct SubSampleID
+  subject::Int
+  ixs::Tuple{Int,Int}
+  time::Tuple{DateTime,DateTime}
+end
+
+struct SubSampleContainer
+  subsamples::Vector{Vector{Float64}}
+  ids::Vector{SubSampleID}
+end
+
+####################################################################################################
+
+function ids_to_dataframe(ids::Vector{SubSampleID})
+  return DataFrame(
+    subject = getfield.(ids, :subject),
+    start_idx = first.(getfield.(ids, :ixs)),
+    end_idx = last.(getfield.(ids, :ixs)),
+    start_time = first.(getfield.(ids, :time)),
+    end_time = last.(getfield.(ids, :time)),
+  )
+end
+
+function dataframe_to_ids(df::DataFrame)
+  ids = SubSampleID[]
+  for row in eachrow(df)
+    push!(
+      ids,
+      SubSampleID(
+        Int(row.subject),
+        (Int(row.start_idx), Int(row.end_idx)),
+        (DateTime(row.start_time), DateTime(row.end_time)),
+      ),
+    )
+  end
+  return ids
+end
+
+####################################################################################################
+
 """
     ExperimentBundle(metadata::DataFrame, experiment::DataFrame)
 
@@ -138,10 +178,17 @@ end
 
 ###################################################################################################
 
-function collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
+function collect_subsamples(
+  signal::Vector{Float64},
+  times::Vector{DateTime},
+  params::TrajectoryParams,
+)
+  if params.limits != (0, 0)
+    signal = signal[params.limits[1]:params.limits[2]]
+  end
   n = length(signal)
   if n == 0
-    return (subsamples = Vector{Vector{Float64}}(), ids = String[])
+    return SubSampleContainer(Vector{Float64}[], SubSampleID[])
   end
 
   # Determine base subsample length
@@ -152,10 +199,10 @@ function collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
   end
 
   subsamples = Vector{Vector{Float64}}()
-  ids = String[]
+  ids = Vector{SubSampleID}()
 
-  for i = 1:params.nsamples
-    # Apply variance jitter
+  for _ = 1:params.nsamples
+    # jitter
     len_var = round(
       Int,
       len * (1 + (rand() * params.var * 2 - params.var)),
@@ -167,13 +214,14 @@ function collect_subsamples(signal::Vector{Float64}, params::TrajectoryParams)
     end
 
     start_idx = rand(1:(n-len_var))
-    subsample = signal[start_idx:start_idx+len_var-1]
+    end_idx = start_idx + len_var - 1
 
-    push!(subsamples, subsample)
-    push!(ids, string(start_idx))
+    push!(subsamples, signal[start_idx:end_idx])
+
+    push!(ids, SubSampleID(-1, (start_idx, end_idx), (times[start_idx], times[end_idx])))
   end
 
-  return (subsamples = subsamples, ids = ids)
+  return SubSampleContainer(subsamples, ids)
 end
 
 function collect_subsamples(
@@ -181,28 +229,33 @@ function collect_subsamples(
   var::Symbol,
   params::TrajectoryParams,
 )
-  max_rows = maximum(nrow(df) for df in values(subdfs))
   basevar = Symbol(replace(string(var), r"_\d+$" => ""))
 
   all_subsamples = Vector{Vector{Float64}}()
-  all_ids = String[]
+  all_ids = Vector{SubSampleID}()
 
   for (animal_id, subdf) in subdfs
     signal = collect(skipmissing(subdf[!, basevar]))
+    times = collect(skipmissing(subdf[!, :Date_Time]))
+
     if isempty(signal)
       @warn "Animal $animal_id has no valid data for $basevar, skipping"
       continue
     end
 
-    # Use the vector-based function
-    result = collect_subsamples(signal, params)
+    result = collect_subsamples(signal, times, params)
+
     append!(all_subsamples, result.subsamples)
-    # Prefix IDs with animal_id
-    append!(all_ids, [string(animal_id, "_", id) for id in result.ids])
+
+    # update subject ID
+    for id in result.ids
+      push!(all_ids, SubSampleID(Int32(animal_id), id.ixs, id.time))
+    end
   end
 
-  return (subsamples = all_subsamples, ids = all_ids)
+  return SubSampleContainer(all_subsamples, all_ids)
 end
+
 
 function collect_subsamples(
   subdfs::Dict{Int,DataFrame},
@@ -210,13 +263,6 @@ function collect_subsamples(
   params::TrajectoryParams,
 )
   Dict(var => collect_subsamples(subdfs, var, params) for var in vars)
-end
-
-###################################################################################################
-
-function split_id(id::String)
-  parts = split(id, "_")
-  return (parse(Int, parts[1]), parse(Int, parts[2]))
 end
 
 ###################################################################################################
@@ -235,51 +281,103 @@ end
 
 function plot_grouped_costmatrix(
   cost_matrix::Matrix{Float64},
-  groups::Vector{String};
-  pad::Int = 10,
-  group_colors::Union{Nothing,Vector{<:Colorant}} = nothing,
+  ids::Vector{SubSampleID},
+  meta::DataFrame;
+  pad::Int = 20,
+  title::String = "",
 )
   N = size(cost_matrix, 1)
-  @assert size(cost_matrix, 2) == N "cost_matrix must be square"
-  @assert length(groups) == N "groups vector must match matrix size"
+  @assert size(cost_matrix, 2) == N
+  @assert length(ids) == N
 
-  # Map groups to integer codes
-  group_levels = unique(groups)
-  group_to_code = Dict(g => i for (i, g) in enumerate(group_levels))
-  codes = [group_to_code[g] for g in groups]
+  # metadata lookup
+  sex_lookup = Dict(row.Animal => row.Sex for row in eachrow(meta))
+  genotype_lookup = Dict(row.Animal => row.Genotype for row in eachrow(meta))
 
-  # Colors per group
-  if group_colors === nothing
-    base = RGB(0.0, 0.5, 0.5)
-    group_colors = distinguishable_colors(length(group_levels), [base])
-  else
-    @assert length(group_colors) == length(group_levels)
+  # Gradient from normalized midpoint
+  start_idxs = first.(getfield.(ids, :ixs))
+  end_idxs = last.(getfield.(ids, :ixs))
+  midpoints = (start_idxs .+ end_idxs) ./ 2
+  max_end = maximum(end_idxs)
+  gradient = round.(Int, 100 .* midpoints ./ max_end)
+
+  # Color logic
+  sex_color(sex) =
+    sex == "F" ? RGB(1, 0, 0) : sex == "M" ? RGB(0, 0, 1) : RGB(0.5, 0.5, 0.5)
+
+  geno_color(g) =
+    g == "S1RKO" ? RGB(0, 0, 0) : g == "WT" ? RGB(1, 1, 1) : RGB(0.5, 0.5, 0.5)
+
+  gradient_color(v) = begin
+    x = clamp(v % 100, 1, 100)
+    t = x / 100
+    RGB(0.2 * (1 - t), 0.8 * t, 0.2 * (1 - t))
   end
 
-  # Build masked matrices
+  # Time cycle logic
+  function time_cycle_color(tstart::DateTime, tend::DateTime)
+    is_day(h) = 6 <= h < 18
+    midpoint = tstart + (tend - tstart) ÷ 2
+    mid_is_day = is_day(hour(midpoint))
+    mid_is_day ? RGB(1.0, 1.0, 0.0) : RGB(0.6, 0.6, 0.0)
+  end
+
+  # padded matrices
   core_only = fill(Float64(NaN), N + pad, N + pad)
-  core_only[pad+1:end, 1:N] .= cost_matrix   # core in bottom-left block
+  core_only[pad+1:end, 1:N] .= cost_matrix
 
   pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
+
+  # Dynamic section indexing
+  # pad is divided into 4 equal blocks
+  block = pad ÷ 4
+  @assert block ≥ 1 "pad must be at least 4"
+
+  sec1 = 1:block
+  sec2 = block+1:2block
+  sec3 = 2block+1:3block
+  sec4 = 3block+1:4block   # up to pad
+
   for i = 1:N
-    pad_colors[1:pad, i] .= group_colors[codes[i]]        # top strip
-    pad_colors[pad+i, N+1:N+pad] .= group_colors[codes[i]] # right strip
+    subject = ids[i].subject
+    sex = sex_lookup[subject]
+    geno = genotype_lookup[subject]
+    v = gradient[i]
+
+    tstart, tend = ids[i].time
+    tcolor = time_cycle_color(tstart, tend)
+
+    # Section 1: Sex
+    pad_colors[sec1, i] .= sex_color(sex)
+    pad_colors[pad+i, N.+sec1] .= sex_color(sex)
+
+    # Section 2: Genotype
+    pad_colors[sec2, i] .= geno_color(geno)
+    pad_colors[pad+i, N.+sec2] .= geno_color(geno)
+
+    # Section 3: Gradient
+    pad_colors[sec3, i] .= gradient_color(v)
+    pad_colors[pad+i, N.+sec3] .= gradient_color(v)
+
+    # Section 4: Time cycle
+    pad_colors[sec4, i] .= tcolor
+    pad_colors[pad+i, N.+sec4] .= tcolor
   end
 
-  # Plot core heatmap with axes disabled
   plt = heatmap(
     core_only;
+    title = title,
     color = :inferno,
     yflip = true,
+    size = (800, 700),
     legend = false,
     nan_color = RGBA(0, 0, 0, 0),
-    axis = false,   # remove x/y axes annotations
+    axis = false,
   )
 
-  # Overlay pad colors directly
   plot!(plt, pad_colors; seriestype = :heatmap, yflip = true, legend = false, axis = false)
 
-  return plt, group_levels, group_colors
+  return plt
 end
 
 ###################################################################################################
