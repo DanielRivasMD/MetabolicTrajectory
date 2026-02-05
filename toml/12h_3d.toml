@@ -1,0 +1,6 @@
+[trajectory]
+nsamples = 100
+len = 160
+var = 0.05
+limit1 = 1
+limit2 = 960

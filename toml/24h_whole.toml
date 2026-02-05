@@ -1,0 +1,4 @@
+[trajectory]
+nsamples = 100
+len = 320
+var = 0.05
