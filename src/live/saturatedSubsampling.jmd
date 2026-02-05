@@ -16,10 +16,8 @@ include("saturatedSubsampling/util.jl")
 1 index = 4.5 minutes
 whole recording 2200 indexes
 165 hours = 6.9 days
-5% ≈ 110 indices = 8 h 15 min
 
 
 ```julia; echo = false
 include("saturatedSubsampling/ck1.jl")
-# include("saturatedSubsampling/ck2.jl")
 ```
