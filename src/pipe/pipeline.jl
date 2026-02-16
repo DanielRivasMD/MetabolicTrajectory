@@ -1,20 +1,27 @@
+####################################################################################################
+
 # Make src/pipe visible
 push!(LOAD_PATH, @__DIR__)
-
-# Load the orchestrator
 using Pipeline
 
-# Load stage modules manually
-include("stages/parse.jl")
-include("stages/fft.jl")
-include("stages/report.jl")
+####################################################################################################
 
-using .ParseStage
-using .FFTStage
-using .ReportStage
+# Load the stage
+include(joinpath(@__DIR__, "..", "bin", "mock.jl"))
+using .Mock
 
-params = Dict("input" => "data/", "output" => "results/")
+####################################################################################################
 
-stages = [Stage("parse", run_parse), Stage("fft", run_fft), Stage("report", run_report)]
+# Create proper typed params
+params = Mock.PipeParams()   # uses defaults
+
+# Or load from TOML:
+# params = Mock.loadPipeParams("config/pipeline.toml", Dict())
+
+####################################################################################################
+
+stages = [Stage("mock", Mock.run)]
 
 run_pipeline(stages; params = params)
+
+####################################################################################################
