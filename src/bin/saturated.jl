@@ -12,6 +12,12 @@ args = saturated_args()
 
 ###################################################################################################
 
+using DynamicAxisWarping
+using Distances
+using Statistics
+
+###################################################################################################
+
 include(joinpath(Paths.CONFIG, "vars.jl"))
 include(joinpath(Paths.UTIL, "ioDataFrame.jl"))
 include(joinpath(Paths.UTIL, "params.jl"))
@@ -32,20 +38,16 @@ sigma_params = loadTrajectoryParams(
 
 ####################################################################################################
 
-dfs = readdf_dict(sigma_params.out)
+dfs = readdf_dict(sigma_params.meta_path)
+vars = Symbol.(names(dfs[1])[2:end])
 
 # Collect subsamples for all variables at once
 subsamples = collect_subsamples(dfs, vars, sigma_params)
 
-tag = matrix_tag(sigma_params)
-outdir = joinpath(Paths.TMP, tag)
-
-# Create directory if missing
-isdir(outdir) || mkpath(outdir)
+out_path = joinpath(sigma_params.dtw_path, matrix_tag(sigma_params))
+isdir(out_path) || mkpath(out_path)
 
 for var in vars
-
-  @vinfo args "Processing variable: $var"
 
   order = sortperm(subsamples[var].ids; by = id -> (id.subject, id.ixs[1]))
   ordered_subsamples = subsamples[var].subsamples[order]
@@ -57,10 +59,8 @@ for var in vars
   end
 
   # Build paths using tag directory
-  cost_path = joinpath(outdir, string(var, "_cost_matrix.csv"))
-  ids_path = joinpath(outdir, string(var, "_order_ids.csv"))
-
-  @vinfo args "Computing DTW cost matrix for $var"
+  cost_path = joinpath(out_path, string(var, "_cost_matrix.csv"))
+  ids_path = joinpath(out_path, string(var, "_order_ids.csv"))
 
   # Compute DTW cost matrix
   cost_matrix = zeros(Float64, N, N)
@@ -81,6 +81,6 @@ for var in vars
 
 end
 
-@vinfo args "Files written: $(sigma_params.out)"
+@vinfo args "Files written: $(out_path)"
 
 ####################################################################################################
