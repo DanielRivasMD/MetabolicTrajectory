@@ -45,6 +45,9 @@ rename!(meta, :Animal_nr => :Animal)
 
 subdfs = split_by_animal(bundles)
 
-@vinfo args "Done"
+writedf(joinpath(sigma_params.out, "meta.csv"), meta)
+writedf_dict(sigma_params.out, subdfs)
+
+@vinfo args "Files written: $(sigma_params.out)"
 
 ####################################################################################################
