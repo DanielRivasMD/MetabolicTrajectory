@@ -1,10 +1,25 @@
 ###################################################################################################
 
 using DataFrames
+using Dates
 using DelimitedFiles
 using XLSX
 
-###################################################################################################
+##################################################################################################
+
+function castdf!(df::DataFrame)
+  # 1) first column → DateTime
+  df[!, 1] = DateTime.(df[!, 1])
+
+  # 2) all other columns → Float64
+  for c in names(df)[2:end]
+    df[!, c] = Float64.(df[!, c])
+  end
+
+  return df
+end
+
+##################################################################################################
 
 function readdf(path; sep = '\t')
   data, header = readdlm(path, sep, header = true)
@@ -30,6 +45,7 @@ function readdf_dict(dir::String; sep = ',')
 
     key = parse(Int, m.captures[1])
     df = readdf(joinpath(dir, file); sep = sep)
+    castdf!(df)
     dict[key] = df
   end
 
