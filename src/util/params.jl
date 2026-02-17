@@ -42,7 +42,8 @@ end
 @with_kw mutable struct TrajectoryParams
   metadata::String = ""
   batches::Vector{String} = []
-  out::String = ""
+  meta_path::String = ""
+  dtw_path::String = ""
   nsamples::Int = 10
   len::Float64 = 0.075
   var::Float64 = 0.005
