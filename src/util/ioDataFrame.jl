@@ -55,7 +55,6 @@ end
 ###################################################################################################
 
 function writedf_dict(dir::String, dict::Dict{Int,DataFrame}; sep = ',')
-  isdir(dir) || mkpath(dir)
   for (k, df) in dict
     path = joinpath(dir, "exp_$k.csv")
     writedf(path, df; sep = sep)
