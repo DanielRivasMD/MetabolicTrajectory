@@ -70,17 +70,3 @@ function loadTrajectoryParams(path::Union{Nothing,String}, args::Dict)
 end
 
 ####################################################################################################
-
-@with_kw mutable struct PipeParams
-  input::String = "iparmas"
-  output::String = "oparams"
-  verbose::Bool = false
-end
-
-####################################################################################################
-
-function loadPipeParams(config_path::Union{Nothing,String}, args)
-  return loadParams(config_path, PipeParams, args; section = :pipe)
-end
-
-####################################################################################################
