@@ -1,8 +1,13 @@
 ####################################################################################################
-# cli args
+#######################################       MODULE       #########################################
 ####################################################################################################
 
-# Load path definitions
+module Sigma
+
+export run, TrajectoryParams, loadTrajectoryParams
+
+####################################################################################################
+
 include(joinpath(PROGRAM_FILE === nothing ? "src" : "..", "config", "paths.jl"))
 using .Paths
 Paths.ensure_dirs()
@@ -19,37 +24,49 @@ include(joinpath(Paths.UTIL, "wrangle.jl"))
 
 ###################################################################################################
 
-# Sigma experiment: one metadata XLSX, three CSV batches
-sigma_params = loadTrajectoryParams(
-  args["config"],
-  Dict(
-    "metadata" => Vars.SMETA_xlsx,
-    "batches" => [Vars.SIG1R_HT_csv, Vars.SIG1R_WT_csv, Vars.KO_WT_csv],
-  ),
-)
+function run(_::Dict)
 
-@vinfo args sigma_params
+  # Sigma experiment: one metadata XLSX, three CSV batches
+  sigma_params = loadTrajectoryParams(
+    args["config"],
+    Dict(
+      "metadata" => Vars.SMETA_xlsx,
+      "batches" => [Vars.SIG1R_HT_csv, Vars.SIG1R_WT_csv, Vars.KO_WT_csv],
+    ),
+  )
 
-###################################################################################################
+  isdir(sigma_params.meta_path) || mkpath(sigma_params.meta_path)
 
-# Load and split
-bundles = load_experiments(sigma_params)
+  ###################################################################################################
 
-# Collect all metadata into one DataFrame
-meta = vcat([b.metadata for b in values(bundles)]...)
+  # Load and split
+  bundles = load_experiments(sigma_params)
 
-# Keep only the columns of interest
-meta = select(meta, [:Animal_nr, :Sex, :Genotype])
+  # Collect all metadata into one DataFrame
+  meta = vcat([b.metadata for b in values(bundles)]...)
 
-# Drop rows where Animal_nr == 0 (if those are placeholders)
-filter!(row -> row.Animal_nr != 0, meta)
-rename!(meta, :Animal_nr => :Animal)
+  # Keep only the columns of interest
+  meta = select(meta, [:Animal_nr, :Sex, :Genotype])
 
-dfs = split_by_animal(bundles)
+  # Drop rows where Animal_nr == 0 (if those are placeholders)
+  filter!(row -> row.Animal_nr != 0, meta)
+  rename!(meta, :Animal_nr => :Animal)
 
-writedf(joinpath(sigma_params.meta_path, "meta.csv"), meta)
-writedf_dict(sigma_params.meta_path, dfs)
+  dfs = split_by_animal(bundles)
 
-@vinfo args "Files written: $(sigma_params.meta_path)"
+  writedf(joinpath(sigma_params.meta_path, "meta.csv"), meta)
+  writedf_dict(sigma_params.meta_path, dfs)
+
+end
+
+end
+
+####################################################################################################
+#######################################       MODULE       #########################################
+####################################################################################################
+
+if abspath(PROGRAM_FILE) == @__FILE__
+  Sigma.run(Dict())
+end
 
 ####################################################################################################
