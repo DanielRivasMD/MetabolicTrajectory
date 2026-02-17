@@ -1,5 +1,10 @@
 ####################################################################################################
 
+using Dates
+using Printf
+
+####################################################################################################
+
 struct SubSampleID
   subject::Int
   ixs::Tuple{Int,Int}
@@ -203,10 +208,7 @@ function collect_subsamples(
 
   for _ = 1:params.nsamples
     # jitter
-    len_var = round(
-      Int,
-      len * (1 + (rand() * params.var * 2 - params.var)),
-    )
+    len_var = round(Int, len * (1 + (rand() * params.var * 2 - params.var)))
 
     if n <= len_var
       @warn "Signal shorter ($n) than subsample length ($len_var), skipping"
@@ -378,6 +380,19 @@ function plot_grouped_costmatrix(
   plot!(plt, pad_colors; seriestype = :heatmap, yflip = true, legend = false, axis = false)
 
   return plt
+end
+
+###################################################################################################
+
+function matrix_tag(p::TrajectoryParams)
+  return @sprintf(
+    "n%d_len%.3f_var%.3f_limits%d_%d",
+    p.nsamples,
+    p.len,
+    p.var,
+    p.limits[1],
+    p.limits[2]
+  )
 end
 
 ###################################################################################################
