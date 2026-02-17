@@ -6,7 +6,6 @@ using XLSX
 
 ###################################################################################################
 
-"read dataframe"
 function readdf(path; sep = '\t')
   data, header = readdlm(path, sep, header = true)
   return DataFrame(data, vec(header))
@@ -14,7 +13,6 @@ end
 
 ###################################################################################################
 
-"read dataframe"
 function readxlsx(path; sheetname::AbstractString = "TimeSeries")
   xf = XLSX.readxlsx(path)
   sheet = xf[sheetname]
@@ -29,11 +27,20 @@ end
 
 ###################################################################################################
 
-"write dataframe"
 function writedf(path, df::DataFrame; sep = ',')
   header = permutedims(names(df))  # 1×N matrix of strings
   data = Matrix(df)
   writedlm(path, vcat(header, data), sep)
+end
+
+###################################################################################################
+
+function writedf_dict(dir::String, dict::Dict{Int,DataFrame}; sep = ',')
+  isdir(dir) || mkpath(dir)
+  for (k, df) in dict
+    path = joinpath(dir, "exp_$k.csv")
+    writedf(path, df; sep = sep)
+  end
 end
 
 ###################################################################################################
