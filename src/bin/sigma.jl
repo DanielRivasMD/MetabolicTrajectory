@@ -24,6 +24,7 @@ include(joinpath(Paths.UTIL, "wrangle.jl"))
 
 ###################################################################################################
 
+# TODO: divide params for sigma & params for saturated. read from a single file, but with different sections
 function run(_::Dict)
 
   # Sigma experiment: one metadata XLSX, three CSV batches
