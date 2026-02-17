@@ -24,12 +24,30 @@ end
 ####################################################################################################
 
 function sigma_args()
-  desc = HELP * "Extract a random subsample & calculate Dynamic Time Wraping\n"
+  desc = HELP * "Process raw data, process & write\n"
   s = ArgParseSettings(description = desc)
 
   @add_arg_table s begin
-    "--trajectory"
-    help = "Path to Trajectory TOML"
+    "--config"
+    help = "Path to config TOML"
+
+    "--verbose", "-v"
+    help = "Enable verbose logging"
+    action = :store_true
+  end
+
+  return parse_args(s)
+end
+
+####################################################################################################
+
+function saturated_args()
+  desc = HELP * "Extract a random subsample & calculate Dynamic Time Wraping matrix\n"
+  s = ArgParseSettings(description = desc)
+
+  @add_arg_table s begin
+    "--config"
+    help = "Path to config TOML"
 
     "--verbose", "-v"
     help = "Enable verbose logging"
