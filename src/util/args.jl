@@ -18,7 +18,25 @@ function struct_to_dict(x)
 end
 
 function symbolise_keys(d::Dict)
-  Dict(Symbol(k) => v for (k, v) in d)
+  Dict{Symbol,Any}(Symbol(k) => v for (k, v) in d)
+end
+
+####################################################################################################
+
+function sigma_args()
+  desc = HELP * "Extract a random subsample & calculate Dynamic Time Wraping\n"
+  s = ArgParseSettings(description = desc)
+
+  @add_arg_table s begin
+    "--trajectory"
+    help = "Path to Trajectory TOML"
+
+    "--verbose", "-v"
+    help = "Enable verbose logging"
+    action = :store_true
+  end
+
+  return parse_args(s)
 end
 
 ####################################################################################################
@@ -43,20 +61,6 @@ function pipe_args()
     "--verbose", "-v"
     help = "Enable verbose logging"
     action = :store_true
-  end
-
-  return parse_args(s)
-end
-
-####################################################################################################
-
-function subsample_args()
-  desc = HELP * "Extract a random subsample & calculate Dynamic Time Wraping\n"
-  s = ArgParseSettings(description = desc)
-
-  @add_arg_table s begin
-    "--trajectory"
-    help = "Path to Trajectory TOML"
   end
 
   return parse_args(s)
