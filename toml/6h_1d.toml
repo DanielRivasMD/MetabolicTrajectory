@@ -1,6 +1,8 @@
 [trajectory]
-nsamples = 100
+nsamples = 10
 len = 80
 var = 0.05
 limit1 = 1
 limit2 = 320
+meta_path = "sigma"
+dtw_path = "dtw"
