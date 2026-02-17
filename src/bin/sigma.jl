@@ -15,13 +15,13 @@ args = sigma_args()
 include(joinpath(Paths.CONFIG, "vars.jl"))
 include(joinpath(Paths.UTIL, "ioDataFrame.jl"))
 include(joinpath(Paths.UTIL, "params.jl"))
-include(joinpath(Paths.UTIL, "sigma.jl"))
+include(joinpath(Paths.UTIL, "wrangle.jl"))
 
 ###################################################################################################
 
 # Sigma experiment: one metadata XLSX, three CSV batches
 sigma_params = loadTrajectoryParams(
-  args["trajectory"],
+  args["config"],
   Dict(
     "metadata" => Vars.SMETA_xlsx,
     "batches" => [Vars.SIG1R_HT_csv, Vars.SIG1R_WT_csv, Vars.KO_WT_csv],
@@ -29,6 +29,8 @@ sigma_params = loadTrajectoryParams(
 )
 
 @vinfo args sigma_params
+
+###################################################################################################
 
 # Load and split
 bundles = load_experiments(sigma_params)
@@ -43,11 +45,11 @@ meta = select(meta, [:Animal_nr, :Sex, :Genotype])
 filter!(row -> row.Animal_nr != 0, meta)
 rename!(meta, :Animal_nr => :Animal)
 
-subdfs = split_by_animal(bundles)
+dfs = split_by_animal(bundles)
 
-writedf(joinpath(sigma_params.out, "meta.csv"), meta)
-writedf_dict(sigma_params.out, subdfs)
+writedf(joinpath(sigma_params.meta_path, "meta.csv"), meta)
+writedf_dict(sigma_params.meta_path, dfs)
 
-@vinfo args "Files written: $(sigma_params.out)"
+@vinfo args "Files written: $(sigma_params.meta_path)"
 
 ####################################################################################################
