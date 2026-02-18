@@ -39,6 +39,10 @@ function main()
     arg_type = Int
     default = 200
 
+    "--sex"
+    help = "Filter by sex (M or F)"
+    default = ""
+
     "--title"
     help = "Plot title"
     default = ""
@@ -51,6 +55,7 @@ function main()
   meta_path = args["meta"]
   out_path = args["out"]
   pad = args["pad"]
+  sex_filter = args["sex"]
   title = args["title"] == "" ? basename(cost_path) : args["title"]
 
   println("Loading cost matrix: $cost_path")
@@ -61,6 +66,20 @@ function main()
 
   println("Loading metadata: $meta_path")
   meta = readdf(meta_path; sep = ',')
+
+  if sex_filter != ""
+    println("Filtering by sex = $sex_filter")
+
+    # subjects with the desired sex
+    allowed_subjects = meta.Animal[meta.Sex.==sex_filter]
+
+    # indices of subsamples whose subject is allowed
+    keep = findall(id -> id.subject in allowed_subjects, all_ordered_ids)
+
+    # filter cost matrix and ids
+    cost_matrix = cost_matrix[keep, keep]
+    all_ordered_ids = all_ordered_ids[keep]
+  end
 
   println("Performing hierarchical clustering…")
   tree = hclust(cost_matrix; linkage = :ward)
