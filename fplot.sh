@@ -2,7 +2,7 @@
 
 BASE="tmp"
 META="sigma/meta.csv"
-OUTBASE="png"
+OUTBASE="fpng"
 
 # Create base output directory if missing
 mkdir -p "$OUTBASE"
@@ -30,6 +30,7 @@ for DIR in "$BASE"/*/; do
           --ids "$IDS" \
           --meta "$META" \
           --out "$OUTPNG" \
+          --sex "F" \
           --title "$NAME"
             
             echo "$COST"
