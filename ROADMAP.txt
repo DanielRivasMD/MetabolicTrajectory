@@ -23,6 +23,10 @@
 ==================================================
 src/bin/FFT.jl
   line 43     TODO   hardcoded
+src/bin/sigma.jl
+  line 27     TODO   divide params for sigma & params for saturated. read from a single file, but with different sections
+src/live/saturatedSubsampling/ck1.jl
+  line 3      TODO   to be tested
 src/util/plot.jl
   line 3      TODO   make multiple dispatch for dataframe & groupeddataframe
 ==================================================
