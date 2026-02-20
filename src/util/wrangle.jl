@@ -343,23 +343,20 @@ function plot_grouped_costmatrix(
   # Time cycle logic
   function time_cycle_color(tstart::DateTime, tend::DateTime)
     is_day(h) = 6 <= h < 18
-    midpoint = tstart + (tend - tstart) ÷ 2
+    midpoint = tstart + (tend - tstart) / 2
     mid_is_day = is_day(hour(midpoint))
     mid_is_day ? RGB(1.0, 1.0, 0.0) : RGB(0.6, 0.6, 0.0)
   end
 
   function subject_color(subject::Int)
-    # deterministic but distinct colors
     palette = [
-      RGB(0.9, 0.1, 0.1),   # 1 = red-ish
-      RGB(0.1, 0.1, 0.9),   # 2 = blue-ish
-      RGB(0.1, 0.7, 0.1),   # 3 = green-ish
-      RGB(0.7, 0.1, 0.7),   # 4 = purple-ish
-      RGB(0.7, 0.5, 0.1),   # 5 = brown-ish
-      RGB(0.1, 0.7, 0.7),   # 6 = teal-ish
+      RGB(0.9, 0.1, 0.1),   # 1
+      RGB(0.1, 0.1, 0.9),   # 2
+      RGB(0.1, 0.7, 0.1),   # 3
+      RGB(0.7, 0.1, 0.7),   # 4
+      RGB(0.7, 0.5, 0.1),   # 5
+      RGB(0.1, 0.7, 0.7),   # 6
     ]
-
-    # wrap around if subject index > palette length
     return palette[(subject-1)%length(palette)+1]
   end
 
@@ -369,10 +366,9 @@ function plot_grouped_costmatrix(
 
   pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
 
-  # Dynamic section indexing
-  # pad is divided into 4 equal blocks
+  # Dynamic section indexing (5 sections)
   block = pad / 5
-  @assert block >= 1 "pad must be at least 4"
+  @assert block >= 1 "pad must be at least 5"
 
   sec1 = 1:block
   sec2 = block+1:2block
@@ -390,24 +386,35 @@ function plot_grouped_costmatrix(
     tcolor = time_cycle_color(tstart, tend)
 
     # Section 1: Sex
-    pad_colors[sec1, i] .= sex_color(sex)
-    pad_colors[pad+i, N.+sec1] .= sex_color(sex)
+    for r in sec1
+      pad_colors[r, i] = sex_color(sex)
+      pad_colors[pad+i, N+r] = sex_color(sex)
+    end
 
     # Section 2: Genotype
-    pad_colors[sec2, i] .= geno_color(geno)
-    pad_colors[pad+i, N.+sec2] .= geno_color(geno)
+    for r in sec2
+      pad_colors[r, i] = geno_color(geno)
+      pad_colors[pad+i, N+r] = geno_color(geno)
+    end
 
     # Section 3: Gradient
-    pad_colors[sec3, i] .= gradient_color(v)
-    pad_colors[pad+i, N.+sec3] .= gradient_color(v)
+    for r in sec3
+      pad_colors[r, i] = gradient_color(v)
+      pad_colors[pad+i, N+r] = gradient_color(v)
+    end
 
     # Section 4: Time cycle
-    pad_colors[sec4, i] .= tcolor
-    pad_colors[pad+i, N.+sec4] .= tcolor
+    for r in sec4
+      pad_colors[r, i] = tcolor
+      pad_colors[pad+i, N+r] = tcolor
+    end
 
-    # Section 5: SUBJECT ID COLOR
-    pad_colors[sec5, i] .= subject_color(subject)
-    pad_colors[pad+i, N.+sec5] .= subject_color(subject)
+    # Section 5: Subject
+    subj_color = subject_color(subject)
+    for r in sec5
+      pad_colors[r, i] = subj_color
+      pad_colors[pad+i, N+r] = subj_color
+    end
   end
 
   plt = heatmap(
