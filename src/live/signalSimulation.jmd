@@ -6,10 +6,6 @@ date: Novemeber 10th
 
 # Description
 
-```julia; echo = false, results = "hidden"
-include("signalSimulation/config.jl")
-include("signalSimulation/util.jl")
-```
 
 ```julia; echo = false
 include("signalSimulation/ck1.jl")
