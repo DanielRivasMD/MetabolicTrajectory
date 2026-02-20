@@ -309,7 +309,7 @@ function plot_grouped_costmatrix(
   cost_matrix::Matrix{Float64},
   ids::Vector{SubSampleID},
   meta::DataFrame;
-  pad::Int = 20,
+  pad::Int = 25,
   title::String = "",
 )
   N = size(cost_matrix, 1)
@@ -348,6 +348,21 @@ function plot_grouped_costmatrix(
     mid_is_day ? RGB(1.0, 1.0, 0.0) : RGB(0.6, 0.6, 0.0)
   end
 
+  function subject_color(subject::Int)
+    # deterministic but distinct colors
+    palette = [
+      RGB(0.9, 0.1, 0.1),   # 1 = red-ish
+      RGB(0.1, 0.1, 0.9),   # 2 = blue-ish
+      RGB(0.1, 0.7, 0.1),   # 3 = green-ish
+      RGB(0.7, 0.1, 0.7),   # 4 = purple-ish
+      RGB(0.7, 0.5, 0.1),   # 5 = brown-ish
+      RGB(0.1, 0.7, 0.7),   # 6 = teal-ish
+    ]
+
+    # wrap around if subject index > palette length
+    return palette[(subject-1)%length(palette)+1]
+  end
+
   # padded matrices
   core_only = fill(Float64(NaN), N + pad, N + pad)
   core_only[pad+1:end, 1:N] .= cost_matrix
@@ -356,13 +371,14 @@ function plot_grouped_costmatrix(
 
   # Dynamic section indexing
   # pad is divided into 4 equal blocks
-  block = pad ÷ 4
-  @assert block ≥ 1 "pad must be at least 4"
+  block = pad / 5
+  @assert block >= 1 "pad must be at least 4"
 
   sec1 = 1:block
   sec2 = block+1:2block
   sec3 = 2block+1:3block
-  sec4 = 3block+1:4block   # up to pad
+  sec4 = 3block+1:4block
+  sec5 = 4block+1:5block
 
   for i = 1:N
     subject = ids[i].subject
@@ -388,6 +404,10 @@ function plot_grouped_costmatrix(
     # Section 4: Time cycle
     pad_colors[sec4, i] .= tcolor
     pad_colors[pad+i, N.+sec4] .= tcolor
+
+    # Section 5: SUBJECT ID COLOR
+    pad_colors[sec5, i] .= subject_color(subject)
+    pad_colors[pad+i, N.+sec5] .= subject_color(subject)
   end
 
   plt = heatmap(
