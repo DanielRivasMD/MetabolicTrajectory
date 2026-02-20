@@ -2,3 +2,5 @@
 nsamples = 100
 len = 160
 var = 0.05
+meta_path = "sigma"
+dtw_path = "dtw"
