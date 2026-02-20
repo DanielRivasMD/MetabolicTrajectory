@@ -7,6 +7,8 @@ Paths.ensure_dirs()
 
 # Load configuration structs
 include(joinpath(Paths.CONFIG, "vars.jl"))
+include(joinpath(Paths.UTIL, "params.jl"))
+include(joinpath(Paths.UTIL, "wrangle.jl"))
 include(joinpath(Paths.UTIL, "ioDataFrame.jl"))
 include(joinpath(Paths.UTIL, "ioLoadXLSX.jl"))
 
@@ -19,12 +21,12 @@ using LinearAlgebra
 using Plots
 using Statistics
 using Random
-using UMAP
 
 # Sigma experiment: one metadata XLSX, three CSV batches
 sigma_params = TrajectoryParams(
   metadata = Vars.SMETA_xlsx,
   batches = [Vars.SIG1R_HT_csv, Vars.SIG1R_WT_csv, Vars.KO_WT_csv],
+  nsamples = 1000
 )
 
 # Load and split
@@ -164,8 +166,6 @@ s2 = collect_subsamples(week_signal2, fake_times(length(week_signal2)), sigma_pa
 s3 = collect_subsamples(week_signal3, fake_times(length(week_signal3)), sigma_params)
 
 merged = merge_subsamplecontainers([s1, s2, s3], [1, 2, 3])
-
-println("Total subsamples: ", length(merged))
 
 order = sortperm(merged.ids; by = id -> (id.subject, id.ixs[1]))
 ordered_subsamples = merged.subsamples[order]
