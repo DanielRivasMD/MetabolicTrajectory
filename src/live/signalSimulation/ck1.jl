@@ -106,13 +106,8 @@ sp = SignalParams(duration_half, step, (0.0001, 0.001), (1.0, 5.0), (0.0, 2π))
 
 # First half-day (seed 111)
 t1, y1, comps1 = build_signal(sp, 111, 10)
-# Second half-day (seed 222)
 t2, y2, comps2 = build_signal(sp, 222, 10)
-
-# Bind halves into one day
 day_signal1 = vcat(y1, y2)
-
-# Extrapolate to a week (7 days)
 week_signal1 = repeat(day_signal1, 7)
 
 # Second week with different seeds
@@ -196,13 +191,47 @@ display(plt)
 
 ####################################################################################################
 
-week_cumsum1 = cumsum(week_signal1)
-week_cumsum2 = cumsum(week_signal2)
-week_cumsum3 = cumsum(week_signal3)
+day_signal1 = cumsum(day_signal1)
+day_signal2 = cumsum(day_signal2)
+day_signal3 = cumsum(day_signal3)
 
-s1 = collect_subsamples(week_cumsum1, fake_times(length(week_cumsum1)), sigma_params)
-s2 = collect_subsamples(week_cumsum2, fake_times(length(week_cumsum2)), sigma_params)
-s3 = collect_subsamples(week_cumsum3, fake_times(length(week_cumsum3)), sigma_params)
+week_signal1 = repeat(day_signal1, 7)
+week_signal2 = repeat(day_signal2, 7)
+week_signal3 = repeat(day_signal3, 7)
+
+# Plot one week
+plt = plot(
+  1:(Int(length(week_signal1) / 7)),
+  week_signal1[1:(Int(length(week_signal1) / 7))],
+  title = "Week Signal 1",
+  legend = false,
+)
+display(plt)
+plt = plot(
+  1:(Int(length(week_signal2) / 7)),
+  week_signal2[1:(Int(length(week_signal1) / 7))],
+  title = "Week Signal 2",
+  legend = false,
+)
+display(plt)
+plt = plot(
+  1:(Int(length(week_signal3) / 7)),
+  week_signal3[1:(Int(length(week_signal1) / 7))],
+  title = "Week Signal 3",
+  legend = false,
+)
+display(plt)
+
+plt = plot(1:length(week_signal1), week_signal1, title = "Week Signal 1", legend = false)
+display(plt)
+plt = plot(1:length(week_signal2), week_signal2, title = "Week Signal 2", legend = false)
+display(plt)
+plt = plot(1:length(week_signal3), week_signal3, title = "Week Signal 3", legend = false)
+display(plt)
+
+s1 = collect_subsamples(week_signal1, fake_times(length(week_signal1)), sigma_params)
+s2 = collect_subsamples(week_signal2, fake_times(length(week_signal2)), sigma_params)
+s3 = collect_subsamples(week_signal3, fake_times(length(week_signal3)), sigma_params)
 
 merged = merge_subsamplecontainers([s1, s2, s3], [1, 2, 3])
 
