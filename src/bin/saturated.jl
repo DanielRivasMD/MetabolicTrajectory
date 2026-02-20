@@ -49,7 +49,7 @@ function run(_::Dict)
   # Collect subsamples for all variables at once
   dfs = readdf_dict(sigma_params.meta_path)
   vars = Symbol.(names(dfs[1])[2:end])
-  subsamples = collect_subsamples(dfs, vars, sigma_params)
+  subsamples = collect_subsamples(dfs, vars, sigma_params, true)
 
   for var in vars
 
