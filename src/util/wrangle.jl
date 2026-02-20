@@ -18,6 +18,29 @@ end
 
 ####################################################################################################
 
+function merge_subsamplecontainers(
+  containers::Vector{SubSampleContainer},
+  subjects::Vector{Int},
+)
+  all_subs = Vector{Vector{Float64}}()
+  all_ids = Vector{SubSampleID}()
+
+  for (i, container) in enumerate(containers)
+    subject = subjects[i]
+
+    for (sub, id) in zip(container.subsamples, container.ids)
+      # overwrite subject ID
+      new_id = SubSampleID(subject, id.ixs, id.time)
+      push!(all_subs, sub)
+      push!(all_ids, new_id)
+    end
+  end
+
+  return SubSampleContainer(all_subs, all_ids)
+end
+
+####################################################################################################
+
 function ids_to_dataframe(ids::Vector{SubSampleID})
   return DataFrame(
     subject = getfield.(ids, :subject),
