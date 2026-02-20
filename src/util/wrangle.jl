@@ -207,11 +207,26 @@ end
 
 ###################################################################################################
 
+# Convert cumulative vector → per-interval increments
+function diff_cumulative(v::Vector{T}) where {T<:Real}
+  if length(v) == 0
+    return v
+  end
+  return [v[1]; v[2:end] .- v[1:end-1]]
+end
+
+###################################################################################################
+
 function collect_subsamples(
   signal::Vector{Float64},
   times::Vector{DateTime},
   params::TrajectoryParams,
+  diff::Bool,
 )
+  if diff
+    signal = diff_cumulative(signal)
+  end
+
   if params.limits != (0, 0)
     signal = signal[params.limits[1]:params.limits[2]]
   end
@@ -254,6 +269,7 @@ function collect_subsamples(
   subdfs::Dict{Int,DataFrame},
   var::Symbol,
   params::TrajectoryParams,
+  diff::Bool,
 )
   basevar = Symbol(replace(string(var), r"_\d+$" => ""))
 
@@ -269,7 +285,7 @@ function collect_subsamples(
       continue
     end
 
-    result = collect_subsamples(signal, times, params)
+    result = collect_subsamples(signal, times, params, diff)
 
     append!(all_subsamples, result.subsamples)
 
@@ -287,8 +303,9 @@ function collect_subsamples(
   subdfs::Dict{Int,DataFrame},
   vars::Vector{Symbol},
   params::TrajectoryParams,
+  diff::Bool,
 )
-  Dict(var => collect_subsamples(subdfs, var, params) for var in vars)
+  Dict(var => collect_subsamples(subdfs, var, params, diff) for var in vars)
 end
 
 ###################################################################################################
