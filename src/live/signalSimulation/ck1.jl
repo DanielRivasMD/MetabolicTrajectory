@@ -89,6 +89,13 @@ function build_signal(sp::SignalParams, seed::Int, num_components::Int)
   return t, y_total, components
 end
 
+function fake_times(n; step_seconds = 270)
+  start = DateTime(2024, 1, 1, 0, 0, 0)
+  return [start + Dates.Second(step_seconds * (i - 1)) for i = 1:n]
+end
+
+####################################################################################################
+
 # --- Experiment setup ---
 # Half-day = 12 hours = 43200 seconds
 # Each index = 4.5 minutes = 270 seconds
@@ -121,11 +128,26 @@ day_signal3 = vcat(y5, y6)
 week_signal3 = repeat(day_signal3, 7)
 
 # Plot one week
-plt = plot(1:(Int(length(week_signal1) / 7)), week_signal1[1:(Int(length(week_signal1) / 7))], title = "Week Signal 1", legend = false)
+plt = plot(
+  1:(Int(length(week_signal1) / 7)),
+  week_signal1[1:(Int(length(week_signal1) / 7))],
+  title = "Week Signal 1",
+  legend = false,
+)
 display(plt)
-plt = plot(1:(Int(length(week_signal2) / 7)), week_signal2[1:(Int(length(week_signal1) / 7))], title = "Week Signal 2", legend = false)
+plt = plot(
+  1:(Int(length(week_signal2) / 7)),
+  week_signal2[1:(Int(length(week_signal1) / 7))],
+  title = "Week Signal 2",
+  legend = false,
+)
 display(plt)
-plt = plot(1:(Int(length(week_signal3) / 7)), week_signal3[1:(Int(length(week_signal1) / 7))], title = "Week Signal 3", legend = false)
+plt = plot(
+  1:(Int(length(week_signal3) / 7)),
+  week_signal3[1:(Int(length(week_signal1) / 7))],
+  title = "Week Signal 3",
+  legend = false,
+)
 display(plt)
 
 plt = plot(1:length(week_signal1), week_signal1, title = "Week Signal 1", legend = false)
@@ -137,55 +159,42 @@ display(plt)
 
 ####################################################################################################
 
-s1 = collect_subsamples(week_signal1, sigma_params)
-s2 = collect_subsamples(week_signal2, sigma_params)
-s3 = collect_subsamples(week_signal3, sigma_params)
+s1 = collect_subsamples(week_signal1, fake_times(length(week_signal1)), sigma_params)
+s2 = collect_subsamples(week_signal2, fake_times(length(week_signal2)), sigma_params)
+s3 = collect_subsamples(week_signal3, fake_times(length(week_signal3)), sigma_params)
 
-# Prefix IDs to distinguish weeks
-s1_ids_prefixed = ["1_" * id for id in s1.ids]
-s2_ids_prefixed = ["2_" * id for id in s2.ids]
-s3_ids_prefixed = ["3_" * id for id in s3.ids]
+merged = merge_subsamplecontainers([s1, s2, s3], [1, 2, 3])
 
-# Concatenate subsamples and ids
-all_subsamples = vcat(s1.subsamples, s2.subsamples, s3.subsamples)
-all_ids = vcat(s1_ids_prefixed, s2_ids_prefixed, s3_ids_prefixed)
+println("Total subsamples: ", length(merged))
 
-# Wrap into dictionary with key :simulation
-subsample_results = Dict(:simulation => (subsamples = all_subsamples, ids = all_ids))
+order = sortperm(merged.ids; by = id -> (id.subject, id.ixs[1]))
+ordered_subsamples = merged.subsamples[order]
+ordered_ids = merged.ids[order]
 
-# Example: inspect
-println("Total subsamples: ", length(subsample_results[:simulation].subsamples))
-
-order = sortperm(subsample_results[:simulation].ids; by = split_id)
-all_ordered_subsamples = subsample_results[:simulation].subsamples[order]
-all_ordered_ids = subsample_results[:simulation].ids[order]
-groups = parse.(Int, first.(split.(all_ordered_ids, "_"))) .|> string
-
-N = length(all_ordered_subsamples)
+N = length(ordered_subsamples)
+if N == 0
+  @warn "No subsamples collected for $var, skipping"
+end
 
 # Compute DTW cost matrix
 cost_matrix = zeros(Float64, N, N)
+
 for i = 1:N
   for j = i:N
-    cost, _, _ = dtw(all_ordered_subsamples[i], all_ordered_subsamples[j], SqEuclidean())
-    norm_cost =
-      cost / mean([length(all_ordered_subsamples[i]), length(all_ordered_subsamples[j])])
+    cost, _, _ = dtw(ordered_subsamples[i], ordered_subsamples[j], SqEuclidean())
+    norm_cost = cost / mean([length(ordered_subsamples[i]), length(ordered_subsamples[j])])
     cost_matrix[i, j] = norm_cost
     cost_matrix[j, i] = norm_cost
   end
 end
 
-plt, levels, colors = plot_grouped_costmatrix(cost_matrix, groups)
+plt = plot_grouped_costmatrix(cost_matrix, ordered_ids, meta)
 display(plt)
 
 # Hierarchical clustering
 tree = hclust(cost_matrix; linkage = :ward)
-leaf_order = tree.order
-cost_matrix_ord = cost_matrix[leaf_order, leaf_order]
-groups_ord = groups[leaf_order]
 
-plt, levels, colors = plot_grouped_costmatrix(cost_matrix_ord, groups_ord)
+plt = plot_grouped_costmatrix(cost_matrix[tree.order, tree.order], ordered_ids[tree.order], meta)
 display(plt)
-
 
 ####################################################################################################
