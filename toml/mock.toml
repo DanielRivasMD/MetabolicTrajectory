@@ -1,9 +1,0 @@
-[pipe]
-# Override default input directory
-input = "data/custom_raw/"
-
-# Override default output directory
-output = "data/custom_processed/"
-
-# Enable verbose logging
-verbose = true
