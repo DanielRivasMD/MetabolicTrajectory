@@ -228,8 +228,11 @@ function collect_subsamples(
   end
 
   if params.limits != (0, 0)
-    signal = signal[params.limits[1]:params.limits[2]]
+    lo = params.limits[1]
+    hi = min(params.limits[2], length(signal))
+    signal = signal[lo:hi]
   end
+
   n = length(signal)
   if n == 0
     return SubSampleContainer(Vector{Float64}[], SubSampleID[])
