@@ -1,0 +1,8 @@
+[trajectory]
+nsamples = 100
+len = 80
+var = 0.05
+limit1 = 641
+limit2 = 1920
+meta_path = "sigma"
+dtw_path = "dtw"
