@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-BASE="tmp"
+# TODO: refactor & consolidate into one script to run sex differintiation & sex-agnostic analysis
+BASE="dtw"
 META="sigma/meta.csv"
-OUTBASE="mpng"
+OUTBASE="png"
 
 # Create base output directory if missing
 mkdir -p "$OUTBASE"
@@ -10,7 +11,7 @@ mkdir -p "$OUTBASE"
 for DIR in "$BASE"/*/; do
     echo "Processing $DIR"
 
-    # Compute relative subpath (e.g. n100_len320.000_var0.050_limits1_960)
+    # Compute relative subpath
     SUBDIR=$(basename "$DIR")
 
     # Create matching output directory
@@ -25,12 +26,12 @@ for DIR in "$BASE"/*/; do
         OUTPNG="$OUTDIR/${NAME}.png"
 
         echo "  → Plotting $NAME"
-        julia --project plot_costmatrix.jl \
+        julia --project src/plot_costmatrix.jl \
           --cost "$COST" \
           --ids "$IDS" \
           --meta "$META" \
           --out "$OUTPNG" \
-          --sex "M" \
+          --sex "" \
           --title "$NAME"
             
             echo "$COST"
