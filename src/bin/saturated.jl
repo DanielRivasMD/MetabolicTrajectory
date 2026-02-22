@@ -30,6 +30,7 @@ include(joinpath(Paths.UTIL, "wrangle.jl"))
 
 ####################################################################################################
 
+# TODO: refactor script to accept cli arguments exclusive to saturated, such as diff calculation
 function run(_::Dict)
 
   # Sigma experiment: one metadata XLSX, three CSV batches
