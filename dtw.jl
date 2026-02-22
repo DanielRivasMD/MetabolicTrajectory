@@ -1,28 +1,21 @@
 using DataFrames
 using DelimitedFiles
+using DynamicAxisWarping
 using Distances
 using Statistics
-using DynamicAxisWarping
-using Printf
 
 # ------------------------------------------------------------
-# 1. Read CSV using DelimitedFiles
+# Read CSV using DelimitedFiles
 # ------------------------------------------------------------
 function read_csv_df(path::String)
   raw = readdlm(path, ',', Any; header = false)
-
-  # First row is header
   header = Symbol.(raw[1, :])
   data = raw[2:end, :]
-
-  # Convert to DataFrame
-  df = DataFrame(data, header)
-
-  return df
+  return DataFrame(data, header)
 end
 
 # ------------------------------------------------------------
-# 2. Read all exp_*.csv files into Dict{Int,DataFrame}
+# Read all exp_*.csv files into Dict{Int,DataFrame}
 # ------------------------------------------------------------
 function readdf_dict(dir::String)
   dict = Dict{Int,DataFrame}()
@@ -40,7 +33,7 @@ function readdf_dict(dir::String)
 end
 
 # ------------------------------------------------------------
-# 3. Extract measurement variable names (all columns except Date_Time)
+# Extract measurement variable names (all columns except Date_Time)
 # ------------------------------------------------------------
 function measurement_vars(dfs::Dict{Int,DataFrame})
   first_df = first(values(dfs))
@@ -48,23 +41,42 @@ function measurement_vars(dfs::Dict{Int,DataFrame})
 end
 
 # ------------------------------------------------------------
-# 4. Extract a signal vector for a given subject + variable
+# Extract a signal vector for a given subject + variable
 # ------------------------------------------------------------
 extract_signal(df::DataFrame, var::Symbol) = collect(skipmissing(df[!, var]))
 
 # ------------------------------------------------------------
-# 5. Compute DTW cost matrix for one measurement across subjects
+# Build a flat list of all signals across subjects & measurements
 # ------------------------------------------------------------
-function dtw_cost_matrix(signals::Dict{Int,Vector{Float64}})
-  subjects = sort(collect(keys(signals)))
-  N = length(subjects)
+function collect_all_signals(dfs)
+  vars = measurement_vars(dfs)
 
+  signals = Vector{Vector{Float64}}()
+  labels = Vector{String}()
+
+  for (subj, df) in dfs
+    for var in vars
+      sig = extract_signal(df, var)
+      isempty(sig) && continue
+
+      push!(signals, sig)
+      push!(labels, string("subj", subj, "_", var))
+    end
+  end
+
+  return signals, labels
+end
+
+# ------------------------------------------------------------
+# Compute full DTW matrix across all signals
+# ------------------------------------------------------------
+function dtw_full_matrix(signals)
+  N = length(signals)
   cost = zeros(Float64, N, N)
-
   for i = 1:N
     for j = i:N
-      s1 = signals[subjects[i]]
-      s2 = signals[subjects[j]]
+      s1 = signals[i]
+      s2 = signals[j]
       d, _, _ = dtw(s1, s2, SqEuclidean())
       nd = d / mean([length(s1), length(s2)])
       cost[i, j] = nd
@@ -72,77 +84,58 @@ function dtw_cost_matrix(signals::Dict{Int,Vector{Float64}})
     end
   end
 
-  return subjects, cost
+  return cost
 end
 
 # ------------------------------------------------------------
-# 6. Save DTW matrix with subject IDs using DelimitedFiles
+# Save DTW matrix with labels using DelimitedFiles
 # ------------------------------------------------------------
-function save_dtw_matrix(path::String, var::Symbol, subjects, cost)
-  N = length(subjects)
-
-  # Build a matrix with headers
+function save_labeled_matrix(path::String, labels, cost)
+  N = length(labels)
   out = Array{Any}(undef, N + 1, N + 1)
 
-  # Top-left corner
-  out[1, 1] = "subject"
+  out[1, 1] = "signal"
 
-  # Column headers
   for j = 1:N
-    out[1, j+1] = subjects[j]
+    out[1, j+1] = labels[j]
   end
 
-  # Row headers + cost matrix
   for i = 1:N
-    out[i+1, 1] = subjects[i]
+    out[i+1, 1] = labels[i]
     for j = 1:N
       out[i+1, j+1] = cost[i, j]
     end
   end
 
-  # Write CSV
-  writedlm(joinpath(path, string(var) * ".csv"), out, ',')
+  writedlm(path, out, ',')
 end
 
 # ------------------------------------------------------------
-# 7. Main function: compute DTW for all variables and save results
+# Main function
 # ------------------------------------------------------------
-function compute_all_dtw(dir::String)
+function compute_cross_measurement_dtw(dir::String)
   println("Loading dataframes…")
   dfs = readdf_dict(dir)
 
-  println("Extracting measurement variables…")
-  vars = measurement_vars(dfs)
+  println("Collecting all signals…")
+  signals, labels = collect_all_signals(dfs)
 
-  # Create output directory
-  outdir = joinpath(dir, "full")
+  println("Computing full DTW matrix…")
+  cost = dtw_full_matrix(signals)
+
+  outdir = joinpath(dir, "full_cross")
   isdir(outdir) || mkdir(outdir)
 
-  println("Computing DTW for each variable…")
+  outfile = joinpath(outdir, "cross_measurement_dtw.csv")
+  println("Saving: $outfile")
 
-  for var in vars
-    println(" → $var")
+  save_labeled_matrix(outfile, labels, cost)
 
-    # Extract signals for all subjects
-    signals = Dict{Int,Vector{Float64}}()
-    for (id, df) in dfs
-      sig = extract_signal(df, var)
-      isempty(sig) && continue
-      signals[id] = sig
-    end
-
-    # Compute DTW
-    subjects, cost = dtw_cost_matrix(signals)
-
-    # Save CSV
-    save_dtw_matrix(outdir, var, subjects, cost)
-  end
-
-  println("All DTW matrices saved in: $outdir")
+  println("Done.")
 end
 
 # ------------------------------------------------------------
-# 8. Run it
+# Run it
 # ------------------------------------------------------------
 sigma_dir = "sigma"
-compute_all_dtw(sigma_dir)
+compute_cross_measurement_dtw(sigma_dir)
