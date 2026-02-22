@@ -1,13 +1,29 @@
-
 using DataFrames
-using CSV
-using Distances   # for DTWDistance()
-using StatsBase
+using DelimitedFiles
+using Distances
+using Statistics
+using Printf
 
 # ------------------------------------------------------------
-# 1. Read all exp_*.csv files into a Dict{Int,DataFrame}
+# 1. Read CSV using DelimitedFiles
 # ------------------------------------------------------------
-function readdf_dict(dir::String; sep = ',')
+function read_csv_df(path::String)
+  raw = readdlm(path, ',', Any; header = false)
+
+  # First row is header
+  header = Symbol.(raw[1, :])
+  data = raw[2:end, :]
+
+  # Convert to DataFrame
+  df = DataFrame(data, header)
+
+  return df
+end
+
+# ------------------------------------------------------------
+# 2. Read all exp_*.csv files into Dict{Int,DataFrame}
+# ------------------------------------------------------------
+function readdf_dict(dir::String)
   dict = Dict{Int,DataFrame}()
 
   for file in readdir(dir)
@@ -15,7 +31,7 @@ function readdf_dict(dir::String; sep = ',')
     m === nothing && continue
 
     key = parse(Int, m.captures[1])
-    df = CSV.read(joinpath(dir, file), DataFrame; delim = sep)
+    df = read_csv_df(joinpath(dir, file))
     dict[key] = df
   end
 
@@ -23,7 +39,7 @@ function readdf_dict(dir::String; sep = ',')
 end
 
 # ------------------------------------------------------------
-# 2. Extract variable names (all columns except Date_Time)
+# 3. Extract measurement variable names (all columns except Date_Time)
 # ------------------------------------------------------------
 function measurement_vars(dfs::Dict{Int,DataFrame})
   first_df = first(values(dfs))
@@ -31,17 +47,15 @@ function measurement_vars(dfs::Dict{Int,DataFrame})
 end
 
 # ------------------------------------------------------------
-# 3. Extract a vector for a given subject + variable
+# 4. Extract a signal vector for a given subject + variable
 # ------------------------------------------------------------
-function extract_signal(df::DataFrame, var::Symbol)
-  return collect(skipmissing(df[!, var]))
-end
+extract_signal(df::DataFrame, var::Symbol) = collect(skipmissing(df[!, var]))
 
 # ------------------------------------------------------------
-# 4. Compute DTW cost matrix for one measurement across subjects
+# 5. Compute DTW cost matrix for one measurement across subjects
 # ------------------------------------------------------------
 function dtw_cost_matrix(signals::Dict{Int,Vector{Float64}})
-  subjects = collect(keys(signals))
+  subjects = sort(collect(keys(signals)))
   N = length(subjects)
 
   cost = zeros(Float64, N, N)
@@ -50,7 +64,6 @@ function dtw_cost_matrix(signals::Dict{Int,Vector{Float64}})
     for j = i:N
       s1 = signals[subjects[i]]
       s2 = signals[subjects[j]]
-
       d = evaluate(DTWDistance(), s1, s2)
       cost[i, j] = d
       cost[j, i] = d
@@ -61,7 +74,36 @@ function dtw_cost_matrix(signals::Dict{Int,Vector{Float64}})
 end
 
 # ------------------------------------------------------------
-# 5. Main function: compute DTW for all variables
+# 6. Save DTW matrix with subject IDs using DelimitedFiles
+# ------------------------------------------------------------
+function save_dtw_matrix(path::String, var::Symbol, subjects, cost)
+  N = length(subjects)
+
+  # Build a matrix with headers
+  out = Array{Any}(undef, N + 1, N + 1)
+
+  # Top-left corner
+  out[1, 1] = "subject"
+
+  # Column headers
+  for j = 1:N
+    out[1, j+1] = subjects[j]
+  end
+
+  # Row headers + cost matrix
+  for i = 1:N
+    out[i+1, 1] = subjects[i]
+    for j = 1:N
+      out[i+1, j+1] = cost[i, j]
+    end
+  end
+
+  # Write CSV
+  writedlm(joinpath(path, string(var) * ".csv"), out, ',')
+end
+
+# ------------------------------------------------------------
+# 7. Main function: compute DTW for all variables and save results
 # ------------------------------------------------------------
 function compute_all_dtw(dir::String)
   println("Loading dataframes…")
@@ -70,10 +112,14 @@ function compute_all_dtw(dir::String)
   println("Extracting measurement variables…")
   vars = measurement_vars(dfs)
 
-  dtw_results = Dict{Symbol,Dict}()
+  # Create output directory
+  outdir = joinpath(dir, "full")
+  isdir(outdir) || mkdir(outdir)
+
+  println("Computing DTW for each variable…")
 
   for var in vars
-    println("Processing variable: $var")
+    println(" → $var")
 
     # Extract signals for all subjects
     signals = Dict{Int,Vector{Float64}}()
@@ -83,18 +129,18 @@ function compute_all_dtw(dir::String)
       signals[id] = sig
     end
 
-    # Compute DTW cost matrix
+    # Compute DTW
     subjects, cost = dtw_cost_matrix(signals)
 
-    dtw_results[var] = Dict(:subjects => subjects, :cost_matrix => cost)
+    # Save CSV
+    save_dtw_matrix(outdir, var, subjects, cost)
   end
 
-  return dtw_results
+  println("All DTW matrices saved in: $outdir")
 end
 
 # ------------------------------------------------------------
-# 6. Run it
+# 8. Run it
 # ------------------------------------------------------------
 sigma_dir = "sigma"
-dtw_results = compute_all_dtw(sigma_dir)
-println("DTW computation complete.")
+compute_all_dtw(sigma_dir)
