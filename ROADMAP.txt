@@ -1,3 +1,8 @@
+observe subsampling experiment & select best cluster
+define clusters & extract example corresponding signals
+explore cross-recurrence & mutual information analyses
+
+
 
 ==================================================
 src/bin/FFT.jl
