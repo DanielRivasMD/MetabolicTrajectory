@@ -384,7 +384,7 @@ function plot_grouped_costmatrix(
   pad_colors = fill(RGBA(0, 0, 0, 0), N + pad, N + pad)
 
   # Dynamic section indexing (5 sections)
-  block = pad / 5
+  block = div(pad, 5)
   @assert block >= 1 "pad must be at least 5"
 
   sec1 = 1:block
