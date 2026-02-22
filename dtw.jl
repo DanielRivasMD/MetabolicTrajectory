@@ -2,6 +2,7 @@ using DataFrames
 using DelimitedFiles
 using Distances
 using Statistics
+using DynamicAxisWarping
 using Printf
 
 # ------------------------------------------------------------
@@ -64,9 +65,10 @@ function dtw_cost_matrix(signals::Dict{Int,Vector{Float64}})
     for j = i:N
       s1 = signals[subjects[i]]
       s2 = signals[subjects[j]]
-      d = evaluate(DTWDistance(), s1, s2)
-      cost[i, j] = d
-      cost[j, i] = d
+      d, _, _ = dtw(s1, s2, SqEuclidean())
+      nd = d / mean([length(s1), length(s2)])
+      cost[i, j] = nd
+      cost[j, i] = nd
     end
   end
 
