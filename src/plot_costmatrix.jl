@@ -8,9 +8,9 @@ using Plots
 
 ####################################################################################################
 
-include("src/util/params.jl")
-include("src/util/wrangle.jl")
-include("src/util/ioDataFrame.jl")
+include("util/params.jl")
+include("util/wrangle.jl")
+include("util/ioDataFrame.jl")
 
 ####################################################################################################
 
@@ -37,7 +37,7 @@ function main()
     "--pad"
     help = "Padding for plot"
     arg_type = Int
-    default = 200
+    default = 250
 
     "--sex"
     help = "Filter by sex (M or F)"
