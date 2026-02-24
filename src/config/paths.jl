@@ -2,40 +2,74 @@
 
 module Paths
 
-"project"
-const PROJECT = normpath(joinpath(@__DIR__, "..", ".."))
+####################################################################################################
 
-# tmp csv
-const TMP = joinpath(PROJECT, "tmp")
+using TOML
 
-"data"
-const DATA = joinpath(PROJECT, "data")
-const SIGMA = joinpath(DATA, "sigma")
-const SCSV = joinpath(SIGMA, "csv")
-const STMP = joinpath(SIGMA, "tmp")
-const SXLSX = joinpath(SIGMA, "xlsx")
-const HMGCR = joinpath(DATA, "HMGCR_TAM")
-const HCSV = joinpath(HMGCR, "csv")
-const HXLSX = joinpath(HMGCR, "xlsx")
+####################################################################################################
 
-"graph"
-const GRAPH = joinpath(PROJECT, "graph")
-const HTML = joinpath(GRAPH, "html")
+const CONFIG = TOML.parsefile("src/config/paths.toml")
+const STRUCT = CONFIG["data"]
+const ROOTS = Dict{Symbol,String}()
 
-"src"
-const SRC = joinpath(PROJECT, "src")
-const BIN = joinpath(SRC, "bin")
-const CONFIG = joinpath(SRC, "config")
-const LIVE = joinpath(SRC, "live")
-const PIPE = joinpath(SRC, "pipe")
-const UTIL = joinpath(SRC, "util")
+####################################################################################################
 
-"Ensure directories exist (for outputs)"
-function ensure_dirs()
-  for d in (DATA, SIGMA, SCSV, SXLSX, HMGCR, HCSV, HXLSX, GRAPH, HTML)
-    isdir(d) || mkpath(d)
+function register(name::Symbol, path::String)
+  ROOTS[name] = path
+end
+
+function resolve(node, parent_path)
+  children = Dict{String,Any}()
+
+  for child in get(node, "children", [])
+    child_node = get(node, child, Dict())
+    child_path = joinpath(parent_path, child)
+    children[child] = resolve(child_node, child_path)
+  end
+
+  return (path = parent_path, children = children)
+end
+
+function build(name::Symbol)
+  root = ROOTS[name]
+  return resolve(STRUCT, root)
+end
+
+function path(name::Symbol, key::String)
+  tree = build(name)
+  parts = split(key, ".")
+  node = tree
+  for p in parts
+    node = node.children[p]
+  end
+  return node.path
+end
+
+function ensure(root)
+  mkpath(root.path)
+  for (_, child) in root.children
+    ensure(child)
   end
 end
+
+function mirror_tree(src, dst)
+  mkpath(dst.path)
+  for (name, src_child) in src.children
+    dst_child_path = joinpath(dst.path, name)
+    mkpath(dst_child_path)
+    dst_child = (path = dst_child_path, children = Dict{String,Any}())
+    mirror_tree(src_child, dst_child)
+  end
+end
+
+function mirror(pair::Pair{Symbol,Symbol})
+  src_name, dst_name = pair
+  src_tree = build(src_name)
+  dst_tree = build(dst_name)
+  mirror_tree(src_tree, dst_tree)
+end
+
+####################################################################################################
 
 end
 
