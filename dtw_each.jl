@@ -55,7 +55,7 @@ extract_signal(df::DataFrame, var::Symbol) = collect(skipmissing(df[!, var]))
 # ------------------------------------------------------------
 # Convert cumulative vector → per-interval increments
 # ------------------------------------------------------------
-function diff_cumulative(v::Vector{T}) where {T<:Real}
+function diff_cumulative(v)
   if length(v) == 0
     return v
   end
