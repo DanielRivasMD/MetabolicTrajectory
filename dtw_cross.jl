@@ -46,6 +46,16 @@ end
 extract_signal(df::DataFrame, var::Symbol) = collect(skipmissing(df[!, var]))
 
 # ------------------------------------------------------------
+# Convert cumulative vector → per-interval increments
+# ------------------------------------------------------------
+function diff_cumulative(v::Vector{T}) where {T<:Real}
+  if length(v) == 0
+    return v
+  end
+  return [v[1]; v[2:end] .- v[1:end-1]]
+end
+
+# ------------------------------------------------------------
 # Build a flat list of all signals across subjects & measurements
 # ------------------------------------------------------------
 function collect_all_signals(dfs)
@@ -57,6 +67,7 @@ function collect_all_signals(dfs)
   for (subj, df) in dfs
     for var in vars
       sig = extract_signal(df, var)
+      sig = diff_cumulative(sig)
       isempty(sig) && continue
 
       push!(signals, sig)
@@ -123,7 +134,7 @@ function compute_cross_measurement_dtw(dir::String)
   println("Computing full DTW matrix…")
   cost = dtw_full_matrix(signals)
 
-  outdir = joinpath(dir, "full_cross")
+  outdir = joinpath(dir, "full")
   isdir(outdir) || mkdir(outdir)
 
   outfile = joinpath(outdir, "cross_measurement_dtw.csv")
