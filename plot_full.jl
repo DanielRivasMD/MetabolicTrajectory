@@ -7,12 +7,21 @@ using Clustering
 using Colors
 using Plots
 
-####################################################################################################
-# LOAD CSV AS MATRIX + SUBJECT VECTOR
-####################################################################################################
+################################################################################
+# YOUR readdf FUNCTION (CORRECT)
+################################################################################
+
+function readdf(path; sep = '\t')
+  data, header = readdlm(path, sep, header = true)
+  return DataFrame(data, vec(header))
+end
+
+################################################################################
+# LOAD SUBJECT MATRIX
+################################################################################
 
 """
-    load_subject_matrix(path::String)
+    load_subject_matrix(path)
 
 Reads a CSV where:
 - Row 1 is: subject,1,2,3,...
@@ -21,32 +30,24 @@ Reads a CSV where:
 
 Returns:
 - subjects::Vector{Int}
-- matrix::Matrix{Float64}
+- mat::Matrix{Float64}
 """
 function load_subject_matrix(path::String)
   raw = readdlm(path, ',', Any)
 
-  header = raw[1, 2:end]              # subject IDs in header
-  subjects = Int.(header)
+  # header row: subject,1,2,3,...
+  subjects = Int.(raw[1, 2:end])
 
-  data = raw[2:end, 2:end]            # numeric matrix
-  mat = Array{Float64}(data)
+  # numeric matrix
+  mat = Float64.(raw[2:end, 2:end])
 
   return subjects, mat
 end
 
-####################################################################################################
+################################################################################
 # PLOTTING FUNCTION
-####################################################################################################
+################################################################################
 
-"""
-    plot_subject_heatmap(mat, subjects, meta; pad=20, title="")
-
-Creates a heatmap with:
-- core matrix
-- top annotation bar for sex
-- second annotation bar for genotype
-"""
 function plot_subject_heatmap(
   mat::Matrix{Float64},
   subjects::Vector{Int},
@@ -55,7 +56,6 @@ function plot_subject_heatmap(
   title::String = "",
 )
   N = length(subjects)
-  @assert size(mat, 1) == N && size(mat, 2) == N
 
   # Lookups
   sex_lookup = Dict(row.Animal => row.Sex for row in eachrow(meta))
@@ -113,16 +113,16 @@ function plot_subject_heatmap(
   return plt
 end
 
-####################################################################################################
+################################################################################
 # MAIN
-####################################################################################################
+################################################################################
 
 function main()
   s = ArgParseSettings()
 
   @add_arg_table s begin
     "--csv"
-    help = "Input CSV file (e.g. RT_WheelMeters.csv)"
+    help = "Input CSV file (subject×subject matrix)"
     required = true
 
     "--meta"
@@ -155,10 +155,7 @@ function main()
   subjects, mat = load_subject_matrix(csv_path)
 
   println("Loading metadata: $meta_path")
-  meta = DataFrame(
-    readdlm(meta_path, ',', Any; header = true)[1],
-    Symbol.(readdlm(meta_path, ',', Any; header = true)[2]),
-  )
+  meta = readdf(meta_path; sep = ',')
 
   println("Clustering…")
   tree = hclust(mat; linkage = :ward)
@@ -175,4 +172,3 @@ function main()
 end
 
 main()
-
