@@ -9,11 +9,19 @@ include("src/util/ioDataFrame.jl")
 include("src/util/params.jl")
 include("src/util/wrangle.jl")
 
+# Convert cumulative vector → per-interval increments
+function diff_cumulative(v::Vector{T}) where {T<:Real}
+  if length(v) == 0
+    return v
+  end
+  return [v[1]; v[2:end] .- v[1:end-1]]
+end
+
 # Set random seed for reproducibility
 Random.seed!(42)
 
 # File paths
-base_path = "dtw/raw/n100_len80.000_var0.050_limits641_1920"
+base_path = "dtw/diff/n100_len320.000_var0.050_limits641_1920"
 cost_path = joinpath(base_path, "RT_WheelMeters_cost_matrix.csv")
 ids_path = joinpath(base_path, "RT_WheelMeters_order_ids.csv")
 meta_path = "sigma/meta.csv"
@@ -50,8 +58,8 @@ for c = 1:n_clusters
   println()
 end
 
-# Create color palette for clusters
-cluster_colors = [:red, :blue, :green, :purple, :orange, :brown, :pink, :cyan][1:n_clusters]
+# Create color palette for 4 clusters
+cluster_colors = [:red, :blue, :green, :purple]
 
 # -------------------------------------------------------------------
 # 1. DENDOGRAM (colored leaves)
@@ -90,10 +98,6 @@ display(dendrogram_plt)
 # -------------------------------------------------------------------
 println("\nCreating heatmap...")
 
-# The heatmap with yflip=true means row 1 is at TOP
-# The dendrogram's tree.order puts first item at TOP of dendrogram
-# So they correspond directly when both use yflip=true
-
 heatmap_plt = heatmap(
   cost_matrix_ordered,
   title = "Clustered Cost Matrix (yflip=true)",
@@ -101,7 +105,7 @@ heatmap_plt = heatmap(
   xlabel = "Column Index (dendrogram order)",
   ylabel = "Row Index (dendrogram order)",
   size = (800, 700),
-  yflip = true,  # This makes row 1 at TOP
+  yflip = true,
   aspect_ratio = :equal,
 )
 
@@ -112,11 +116,11 @@ display(heatmap_plt)
 # -------------------------------------------------------------------
 println("\nSampling 5 random subsamples from each cluster...")
 
-# Store all plots for the 5x1 layout
+# Store all plots for the 4x1 layout
 cluster_plots = []
 
-# Function to extract signal from original files
-function extract_signal(subject::Int, start_idx::Int, end_idx::Int)
+# Function to extract and differentiate signal from original files
+function extract_diff_signal(subject::Int, start_idx::Int, end_idx::Int)
   # Path to original subject file
   subject_path = joinpath("sigma", "exp_$(subject).csv")
 
@@ -128,8 +132,7 @@ function extract_signal(subject::Int, start_idx::Int, end_idx::Int)
   # Read the subject's data
   df = readdf(subject_path; sep = ',')
 
-  # Extract WheelMeters column (assuming it's the 2nd column or named appropriately)
-  # Adjust column name if different
+  # Extract WheelMeters column
   if "WheelMeters" in names(df)
     signal_raw = df[!, "WheelMeters"]
   elseif size(df, 2) >= 2
@@ -142,21 +145,21 @@ function extract_signal(subject::Int, start_idx::Int, end_idx::Int)
   # Convert to Float64 and handle missing
   signal = Float64.(coalesce.(signal_raw, 0))
 
-  # Differentiate if needed (since we're in diff/ directory)
-  # signal = diff_cumulative(signal)  # Uncomment if signals need differentiation
+  # Apply diff_cumulative to get per-interval increments
+  signal_diff = diff_cumulative(signal)
 
   # Extract the subsample
-  if start_idx <= length(signal) && end_idx <= length(signal)
-    return signal[start_idx:end_idx]
+  if start_idx <= length(signal_diff) && end_idx <= length(signal_diff)
+    return signal_diff[start_idx:end_idx]
   else
-    @warn "Indices out of bounds for subject $subject: $start_idx-$end_idx (signal length=$(length(signal)))"
+    @warn "Indices out of bounds for subject $subject: $start_idx-$end_idx (signal length=$(length(signal_diff)))"
     return nothing
   end
 end
 
 # Process each cluster
 for c = 1:n_clusters
-  # Find all indices in this cluster (in original order, not tree.order)
+  # Find all indices in this cluster (in original order)
   cluster_indices_original = findall(cluster_labels .== c)
 
   # Convert to indices in tree.order (for ids_ordered)
@@ -169,16 +172,20 @@ for c = 1:n_clusters
 
   println("\nCluster $c: sampling $n_to_sample subsamples")
 
+  # Get unique subjects for title
+  unique_subjects = unique([ids_ordered[i].subject for i in sampled_positions])
+  subject_str = join(string.("S-", unique_subjects), ", ")
+
   # Create a subplot for this cluster
   subplot = plot(
-    title = "C-$c (S-$(join(unique([ids_ordered[i].subject for i in sampled_positions]), ',')))",
+    title = "C-$c ($subject_str)",
     xlabel = "Time Index",
-    ylabel = "Wheel Meters",
+    ylabel = "Δ Wheel Meters",
     legend = false,
     size = (800, 200),
   )
 
-  # Extract and plot each sampled subsample
+  # Extract and plot each sampled subsample (with diff_cumulative applied)
   for (i, pos) in enumerate(sampled_positions)
     id = ids_ordered[pos]
     subject = id.subject
@@ -186,18 +193,18 @@ for c = 1:n_clusters
 
     println("  Sampling: Subject $subject, indices $start_idx-$end_idx")
 
-    signal = extract_signal(subject, start_idx, end_idx)
+    signal_diff = extract_diff_signal(subject, start_idx, end_idx)
 
-    if !isnothing(signal)
+    if !isnothing(signal_diff)
       # Create x-axis (relative time)
-      x_vals = 1:length(signal)
+      x_vals = 1:length(signal_diff)
 
       # Use color intensity based on sample (different shades of cluster color)
       alpha_val = 0.3 + 0.7 * (i / n_to_sample)
       plot!(
         subplot,
         x_vals,
-        signal,
+        signal_diff,
         color = cluster_colors[c],
         linewidth = 2,
         alpha = alpha_val,
@@ -209,9 +216,9 @@ for c = 1:n_clusters
   push!(cluster_plots, subplot)
 end
 
-# Combine all cluster plots into a 5x1 layout
+# Combine all cluster plots into a 4x1 layout
 cluster_plots_combined =
-  plot(cluster_plots..., layout = (5, 1), size = (1000, 1200), margin = 5Plots.mm)
+  plot(cluster_plots..., layout = (4, 1), size = (1000, 1000), margin = 5Plots.mm)
 
 display(cluster_plots_combined)
 
@@ -222,16 +229,16 @@ println("\nCombining all plots...")
 
 # Top row: dendrogram
 # Middle: heatmap
-# Bottom: cluster samples (5 rows)
+# Bottom: cluster samples (4 rows)
 
 combined_plt = plot(
   dendrogram_plt,
   heatmap_plt,
   cluster_plots_combined,
   layout = grid(3, 1, heights = [0.25, 0.35, 0.4]),
-  size = (1200, 1800),
+  size = (1200, 1600),
   margin = 5Plots.mm,
-  title = "Complete Analysis - $n_clusters Clusters",
+  title = "Complete Analysis - $n_clusters Clusters (Differentiated Signals)",
 )
 
 display(combined_plt)
@@ -242,28 +249,28 @@ display(combined_plt)
 println("\nSaving figures...")
 
 # Create output directory
-out_dir = "analysis_output"
+out_dir = "analysis_output_diff"
 mkpath(out_dir)
 
 savefig(dendrogram_plt, joinpath(out_dir, "01_dendrogram.png"))
 savefig(heatmap_plt, joinpath(out_dir, "02_heatmap.png"))
-savefig(cluster_plots_combined, joinpath(out_dir, "03_cluster_samples.png"))
-savefig(combined_plt, joinpath(out_dir, "04_complete_analysis.png"))
+savefig(cluster_plots_combined, joinpath(out_dir, "03_cluster_samples_diff.png"))
+savefig(combined_plt, joinpath(out_dir, "04_complete_analysis_diff.png"))
 
 println("All figures saved to: $out_dir/")
 
 # -------------------------------------------------------------------
-# 6. CORRESPONDENCE BETWEEN HEATMAP AND DENDOGRAM
+# 6. CORRESPONDENCE BETWEEN VISUALIZATIONS
 # -------------------------------------------------------------------
 println("\n" * "="^60)
 println("CORRESPONDENCE BETWEEN VISUALIZATIONS:")
 println("="^60)
 println("""
-- The dendrogram shows hierarchical clustering with colored leaves
-- The heatmap uses yflip=true (row 1 at TOP, row N at BOTTOM)
-- The dendrogram's tree.order lists items from TOP to BOTTOM
-- Therefore, the TOP of dendrogram corresponds to TOP row of heatmap
-- The cluster samples show actual signals from random subsamples
+- Dendrogram shows hierarchical clustering with 4 colored clusters
+- Heatmap uses yflip=true (row 1 at TOP, row N at BOTTOM)
+- Dendrogram's tree.order lists items from TOP to BOTTOM
+- TOP of dendrogram corresponds to TOP row of heatmap
+- Cluster samples show DIFFERENTIATED signals (per-interval increments)
 """)
 
 # Print the mapping for verification
@@ -275,4 +282,4 @@ for i = 1:min(10, length(tree.order))
   println("  Dendro pos $i → original idx $orig_idx → Cluster $cluster → Subject $subject")
 end
 
-println("\nDone!")
+println("\nDone! Differentiated signals (Δ Wheel Meters) plotted for each cluster.")
