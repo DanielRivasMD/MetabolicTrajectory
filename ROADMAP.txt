@@ -5,12 +5,10 @@ explore cross-recurrence & mutual information analyses
 
 
 ==================================================
-src/bin/FFT.jl
-  line 43     TODO   hardcoded
+plot.sh
+  line 3      TODO   refactor & consolidate into one script to run sex differintiation & sex-agnostic analysis
+src/bin/saturated.jl
+  line 33     TODO   refactor script to accept cli arguments exclusive to saturated, such as diff calculation
 src/bin/sigma.jl
   line 27     TODO   divide params for sigma & params for saturated. read from a single file, but with different sections
-src/live/saturatedSubsampling/ck1.jl
-  line 3      TODO   to be tested
-src/util/plot.jl
-  line 3      TODO   make multiple dispatch for dataframe & groupeddataframe
 ==================================================
