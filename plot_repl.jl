@@ -4,6 +4,7 @@ using Clustering
 using Plots
 using StatsPlots
 using Random
+using Statistics
 
 include("src/util/ioDataFrame.jl")
 include("src/util/params.jl")
@@ -112,9 +113,9 @@ heatmap_plt = heatmap(
 display(heatmap_plt)
 
 # -------------------------------------------------------------------
-# 3. SAMPLE 5 RANDOM SUBSAMPLES FROM EACH CLUSTER
+# 3. MEAN ± STD FOR EACH CLUSTER
 # -------------------------------------------------------------------
-println("\nSampling 5 random subsamples from each cluster...")
+println("\nComputing mean and standard deviation for each cluster...")
 
 # Store all plots for the 4x1 layout
 cluster_plots = []
@@ -159,66 +160,116 @@ end
 
 # Process each cluster
 for c = 1:n_clusters
-  # Find all indices in this cluster (in original order)
+  println("\nProcessing Cluster $c...")
+
+  # Find all indices in this cluster (in tree.order order)
   cluster_indices_original = findall(cluster_labels .== c)
 
-  # Convert to indices in tree.order (for ids_ordered)
-  cluster_indices_ordered =
-    [findfirst(==(idx), tree.order) for idx in cluster_indices_original]
+  # Get the corresponding positions in ids_ordered
+  cluster_positions = [findfirst(==(idx), tree.order) for idx in cluster_indices_original]
 
-  # Randomly sample up to 5 from this cluster
-  n_to_sample = min(5, length(cluster_indices_ordered))
-  sampled_positions = rand(cluster_indices_ordered, n_to_sample)
+  println("  Found $(length(cluster_positions)) subsamples in cluster $c")
 
-  println("\nCluster $c: sampling $n_to_sample subsamples")
+  # Collect all signals for this cluster
+  cluster_signals = []
+  valid_lengths = Int[]
 
-  # Get unique subjects for title
-  unique_subjects = unique([ids_ordered[i].subject for i in sampled_positions])
-  subject_str = join(string.("S-", unique_subjects), ", ")
-
-  # Create a subplot for this cluster
-  subplot = plot(
-    title = "C-$c ($subject_str)",
-    xlabel = "Time Index",
-    ylabel = "Δ Wheel Meters",
-    legend = false,
-    size = (800, 200),
-  )
-
-  # Extract and plot each sampled subsample (with diff_cumulative applied)
-  for (i, pos) in enumerate(sampled_positions)
+  for pos in cluster_positions
     id = ids_ordered[pos]
     subject = id.subject
     start_idx, end_idx = id.ixs
 
-    println("  Sampling: Subject $subject, indices $start_idx-$end_idx")
-
     signal_diff = extract_diff_signal(subject, start_idx, end_idx)
 
     if !isnothing(signal_diff)
-      # Create x-axis (relative time)
-      x_vals = 1:length(signal_diff)
-
-      # Use color intensity based on sample (different shades of cluster color)
-      alpha_val = 0.3 + 0.7 * (i / n_to_sample)
-      plot!(
-        subplot,
-        x_vals,
-        signal_diff,
-        color = cluster_colors[c],
-        linewidth = 2,
-        alpha = alpha_val,
-        label = false,
-      )
+      push!(cluster_signals, signal_diff)
+      push!(valid_lengths, length(signal_diff))
     end
   end
+
+  if isempty(cluster_signals)
+    println("  WARNING: No valid signals found for cluster $c")
+    continue
+  end
+
+  # Determine common length for alignment (use minimum length)
+  common_length = minimum(valid_lengths)
+  println("  Using common length: $common_length (from min of signals)")
+
+  # Trim all signals to common length
+  trimmed_signals = [sig[1:common_length] for sig in cluster_signals]
+
+  # Create matrix: rows = time points, columns = samples
+  signal_matrix = hcat(trimmed_signals...)
+
+  # Compute mean and std across samples for each time point
+  mean_signal = mean(signal_matrix, dims = 2)[:]
+  std_signal = std(signal_matrix, dims = 2)[:]
+
+  # Get unique subjects for title
+  unique_subjects = unique([ids_ordered[pos].subject for pos in cluster_positions])
+  subject_str = join(string.("S-", unique_subjects[1:min(5, end)]), ", ")
+  if length(unique_subjects) > 5
+    subject_str *= " … ($(length(unique_subjects)) total)"
+  end
+
+  # Create x-axis
+  x_vals = 1:common_length
+
+  # Create subplot for this cluster
+  subplot = plot(
+    title = "C-$c: $(length(cluster_positions)) subsamples ($subject_str)",
+    xlabel = "Time Index",
+    ylabel = "Δ Wheel Meters",
+    legend = :topright,
+    size = (800, 200),
+  )
+
+  # Plot individual signals with low alpha (background)
+  for sig in trimmed_signals
+    plot!(
+      subplot,
+      x_vals,
+      sig,
+      color = cluster_colors[c],
+      linewidth = 1,
+      alpha = 0.15,
+      label = false,
+    )
+  end
+
+  # Plot mean as bold line
+  plot!(
+    subplot,
+    x_vals,
+    mean_signal,
+    color = cluster_colors[c],
+    linewidth = 4,
+    label = "Mean",
+  )
+
+  # Plot mean ± std as shaded region
+  plot!(
+    subplot,
+    x_vals,
+    mean_signal + std_signal,
+    fillrange = mean_signal - std_signal,
+    fillalpha = 0.3,
+    linealpha = 0.0,
+    color = cluster_colors[c],
+    label = "Mean ± Std",
+  )
 
   push!(cluster_plots, subplot)
 end
 
 # Combine all cluster plots into a 4x1 layout
-cluster_plots_combined =
-  plot(cluster_plots..., layout = (4, 1), size = (1000, 1000), margin = 5Plots.mm)
+cluster_plots_combined = plot(
+  cluster_plots...,
+  layout = (4, 1),
+  size = (1000, 1200),  # Taller to accommodate more info
+  margin = 5Plots.mm,
+)
 
 display(cluster_plots_combined)
 
@@ -229,16 +280,16 @@ println("\nCombining all plots...")
 
 # Top row: dendrogram
 # Middle: heatmap
-# Bottom: cluster samples (4 rows)
+# Bottom: cluster mean plots (4 rows)
 
 combined_plt = plot(
   dendrogram_plt,
   heatmap_plt,
   cluster_plots_combined,
-  layout = grid(3, 1, heights = [0.25, 0.35, 0.4]),
-  size = (1200, 1600),
+  layout = grid(3, 1, heights = [0.2, 0.3, 0.5]),  # More space for mean plots
+  size = (1200, 1800),
   margin = 5Plots.mm,
-  title = "Complete Analysis - $n_clusters Clusters (Differentiated Signals)",
+  title = "Complete Analysis - $n_clusters Clusters (Mean ± Std)",
 )
 
 display(combined_plt)
@@ -249,37 +300,49 @@ display(combined_plt)
 println("\nSaving figures...")
 
 # Create output directory
-out_dir = "analysis_output_diff"
+out_dir = "analysis_output_mean_std"
 mkpath(out_dir)
 
 savefig(dendrogram_plt, joinpath(out_dir, "01_dendrogram.png"))
 savefig(heatmap_plt, joinpath(out_dir, "02_heatmap.png"))
-savefig(cluster_plots_combined, joinpath(out_dir, "03_cluster_samples_diff.png"))
-savefig(combined_plt, joinpath(out_dir, "04_complete_analysis_diff.png"))
+savefig(cluster_plots_combined, joinpath(out_dir, "03_cluster_mean_std.png"))
+savefig(combined_plt, joinpath(out_dir, "04_complete_analysis_mean_std.png"))
 
 println("All figures saved to: $out_dir/")
 
 # -------------------------------------------------------------------
-# 6. CORRESPONDENCE BETWEEN VISUALIZATIONS
+# 6. SUMMARY STATISTICS
 # -------------------------------------------------------------------
 println("\n" * "="^60)
-println("CORRESPONDENCE BETWEEN VISUALIZATIONS:")
+println("CLUSTER SUMMARY STATISTICS:")
 println("="^60)
-println("""
-- Dendrogram shows hierarchical clustering with 4 colored clusters
-- Heatmap uses yflip=true (row 1 at TOP, row N at BOTTOM)
-- Dendrogram's tree.order lists items from TOP to BOTTOM
-- TOP of dendrogram corresponds to TOP row of heatmap
-- Cluster samples show DIFFERENTIATED signals (per-interval increments)
-""")
 
-# Print the mapping for verification
-println("\nFirst 10 mappings (dendrogram order → original index):")
-for i = 1:min(10, length(tree.order))
-  orig_idx = tree.order[i]
-  cluster = cluster_labels[orig_idx]
-  subject = ids_ordered[i].subject
-  println("  Dendro pos $i → original idx $orig_idx → Cluster $cluster → Subject $subject")
+for c = 1:n_clusters
+  cluster_indices = findall(cluster_labels .== c)
+  n_samples = length(cluster_indices)
+
+  # Get subjects in this cluster
+  subjects_in_cluster =
+    unique([ids_ordered[findfirst(==(idx), tree.order)].subject for idx in cluster_indices])
+
+  # Get metadata for these subjects
+  sex_counts = Dict{String,Int}()
+  geno_counts = Dict{String,Int}()
+
+  for s in subjects_in_cluster
+    row = meta[meta.Animal.==s, :]
+    if nrow(row) > 0
+      sex = row[1, :Sex]
+      geno = row[1, :Genotype]
+      sex_counts[sex] = get(sex_counts, sex, 0) + 1
+      geno_counts[geno] = get(geno_counts, geno, 0) + 1
+    end
+  end
+
+  println("Cluster $c: $n_samples subsamples from $(length(subjects_in_cluster)) subjects")
+  println("  Sex: $(join(["$k=$v" for (k,v) in sex_counts], ", "))")
+  println("  Genotype: $(join(["$k=$v" for (k,v) in geno_counts], ", "))")
+  println()
 end
 
-println("\nDone! Differentiated signals (Δ Wheel Meters) plotted for each cluster.")
+println("\nDone! Mean ± standard deviation plotted for each cluster.")
