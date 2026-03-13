@@ -4,17 +4,7 @@ simulate signals where:
 - a change is introduce along the trajectory
 - compare all these three different scenarios by analyzing whole trajectories and subsampling
 
-what about sampling smaller to capture day patterns
-select figures where we observe differences among phenotypes
-lets start with averages from sexes
-
-add stats tests & auc
-
-
-
-observe subsampling experiment & select best cluster
-define clusters & extract example corresponding signals
-explore cross-recurrence & mutual information analyses
+- add cross-recurrence & mutual information simulation & analysis for individual & for whole dataset average
 
 
 
