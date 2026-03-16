@@ -1,6 +1,0 @@
-[trajectory]
-nsamples = 100
-len = 80
-var = 0.05
-meta_path = "sigma"
-dtw_path = "dtw"
