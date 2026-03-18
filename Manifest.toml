@@ -2,7 +2,7 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "ce86a1171ee8e0e1323b6859f9ebbfb2aaffe843"
+project_hash = "f149605b5ca766c8355355727f33a389242f2afa"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -103,6 +103,12 @@ version = "7.23.0"
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
+
+[[deps.Avicenna]]
+deps = ["ArgParse", "Dates", "Markdown", "SHA", "Serialization", "UUIDs", "Weave"]
+path = "/home/drivas/Factorem/Avicenna/"
+uuid = "94ad6e5d-203d-4d53-856b-400d6f23acee"
+version = "0.1.0"
 
 [[deps.AxisAlgorithms]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
