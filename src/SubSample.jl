@@ -1,0 +1,12 @@
+# src/SS.jl
+module SS
+
+include("util/shared.jl")
+include("util/ssutil.jl")
+include("flow/ssflow.jl")
+include("inter/cli/sscli.jl")
+include("inter/repl/ssrepl.jl")
+
+export SSCore, SSFlow, SSCLI, SSREPL
+
+end
