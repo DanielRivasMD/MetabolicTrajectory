@@ -22,11 +22,10 @@ function readxlsx(path; sheetname::AbstractString = "TimeSeries")
   xf = XLSX.readxlsx(path)
   sheet = xf[sheetname]
 
-  # extract header row and data block
   header = vec(sheet[1, :]) |> collect
   data = sheet[2:end, :] |> collect
 
-  df = DataFrame(data, Symbol.(header))  # use symbols for column names
+  df = DataFrame(data, Symbol.(header))
   return df
 end
 
@@ -43,4 +42,3 @@ end
 end
 
 ####################################################################################################
-

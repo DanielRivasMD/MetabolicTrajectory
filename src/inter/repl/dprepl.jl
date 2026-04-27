@@ -17,7 +17,7 @@ export run
 """
     run(config_path::String; out_dir=nothing, no_cache=false) -> Result
 
-Run the data ingestion workflow from the REPL
+Run the data processing workflow from the REPL
 """
 function run(config_path::String; out_dir = nothing, no_cache = false)
   config = Dict{String,Any}("config_path" => config_path)

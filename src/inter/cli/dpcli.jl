@@ -18,7 +18,7 @@ function run(args::Vector{String})
   s = ArgParseSettings()
   @add_arg_table! s begin
     "--config", "-c"
-    help = "Path to TOML configuration file for ingestion"
+    help = "Path to TOML configuration file"
     required = true
     "--out-dir", "-o"
     help = "Override default output directory"
@@ -43,8 +43,8 @@ function run(args::Vector{String})
   cache = Cache("cache/data_processing", !parsed["no-cache"])
   result = launch(flow, flow_config; cache = cache)
 
-  println("Data processing completed.")
-  println("Output directory: ", result.stage_outputs["01_ingest"]["out_dir"])
+  println("Data processing completed")
+  println("Output directory: ", result.stage_outputs["01_file_loading"]["out_dir"])
   return 0
 end
 

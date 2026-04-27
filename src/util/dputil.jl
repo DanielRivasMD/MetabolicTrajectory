@@ -16,14 +16,6 @@ const TIME_COLS = ["Date_Time"]
 
 ####################################################################################################
 
-struct IngestParams
-  metadata::String
-  batches::Vector{String}
-  out_dir::String
-end
-
-####################################################################################################
-
 struct ExperimentBundle
   metadata::DataFrame
   experiment::DataFrame
@@ -31,42 +23,48 @@ end
 
 ####################################################################################################
 
-default_out_dir() = "sigma"
+struct DPParams
+  metadata::String
+  batches::Vector{String}
+  out_dir::String
+end
 
 ####################################################################################################
 
-function load_ingest_params(config_path::String)
+default_out_dir() = ""
+
+####################################################################################################
+
+function load_dp_params(config_path::String)
   raw = TOML.parsefile(config_path)
-  section = get(raw, "ingest", raw)
+  section = get(raw, "data_processing", raw)
   metadata = section["metadata"]
   batches = section["batches"]
   out_dir = get(section, "out_dir", default_out_dir())
-  return IngestParams(metadata, batches, out_dir)
+  return DPParams(metadata, batches, out_dir)
 end
 
 ####################################################################################################
 
 """
-    run_ingestion(params::IngestParams) -> Dict
+    run_dp(params::DPParams) -> Dict
 
-Performs the full ingestion:
-  1. Load experiments from metadata XLSX and CSV batches.
-  2. Build a unified metadata DataFrame (Animal, Sex, Genotype).
-  3. Split time‑series data by animal.
-  4. Write meta.csv and per‑animal CSVs to `params.out_dir`.
+Performs data processing:
+  1. Load experiments from metadata XLSX and CSV batches
+  2. Build a unified metadata DataFrame (Animal, Sex, Genotype)
+  3. Split time‑series data by animal
+  4. Write meta.csv and per‑animal CSVs to `params.out_dir`
 
-Returns a dictionary with `out_dir` and `animal_count`.
+Returns a dictionary with `out_dir` and `animal_count`
 """
-function run_ingestion(params::IngestParams)
+function run_dp(params::DPParams)
   mkpath(params.out_dir)
 
   bundles = load_experiments(params)
   meta = build_metadata(bundles)
 
-  # Save metadata
   writedf(joinpath(params.out_dir, "meta.csv"), meta; sep = ',')
 
-  # Split and write per‑animal CSVs
   dfs = split_by_animal(bundles)
   writedf_dict(params.out_dir, dfs; sep = ',')
 
@@ -86,7 +84,7 @@ end
 
 ####################################################################################################
 
-function load_experiments(params::IngestParams)
+function load_experiments(params::DPParams)
   return load_experiments(params.metadata, params.batches)
 end
 
@@ -104,7 +102,6 @@ function load_experiments(metadata_path::String, batches::Vector{String})
       sheet = xf[sheetname]
       metadata = XLSX.gettable(sheet) |> DataFrame
 
-      # Normalise metadata columns
       rename!(metadata, Symbol.(names(metadata)))
       metadata[!, :Cage_nr] = Int.(metadata[!, :Cage_nr])
       metadata[!, :Animal_nr] =
@@ -113,7 +110,6 @@ function load_experiments(metadata_path::String, batches::Vector{String})
       metadata[!, :Genotype] =
         map(x -> x == "EMPTY" ? "" : string(x), metadata[!, :Genotype])
 
-      # Find matching CSV
       csvmatch = filter(f -> occursin(datekey, f), batches)
       if isempty(csvmatch)
         @warn "No CSV file found for date $datekey"
@@ -124,12 +120,10 @@ function load_experiments(metadata_path::String, batches::Vector{String})
 
       vars = setdiff(names(df), TIME_COLS)
 
-      # Parse time columns
       for c in TIME_COLS
         df[!, c] = DateTime.(df[!, c], dateformat"mm/dd/yyyy HH:MM:SS")
       end
 
-      # Cast all other columns to Float64
       for c in vars
         df[!, c] = Float64.(df[!, c])
       end
@@ -147,7 +141,6 @@ function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = Symbol(TIME
   df = bundle.experiment
   meta = bundle.metadata
 
-  # Map column suffixes to animal IDs
   suffix_ids = Dict{Symbol,Int}()
   for col in names(df)
     m = match(r"_(\d+)$", String(col))
@@ -161,7 +154,6 @@ function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = Symbol(TIME
     push!(get!(grouped, id, Symbol[]), col)
   end
 
-  # Build suffix → Animal_nr mapping
   raw_ids = meta[!, :Animal_nr]
   idmap = Dict(i => raw_ids[i] for i = 1:nrow(meta))
 
@@ -173,7 +165,7 @@ function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = Symbol(TIME
     end
 
     sdf = df[:, vcat([timecol], sort(cols))]
-    # Strip suffix from column names
+
     renames = Dict(c => Symbol(replace(String(c), r"_\d+$" => "")) for c in cols)
     rename!(sdf, renames)
     bases = sort(Symbol.(replace.(String.(cols), r"_\d+$" => "")))
