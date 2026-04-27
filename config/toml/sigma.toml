@@ -1,0 +1,8 @@
+[data_processing]
+metadata = "data/orig/sigma/sigma_groups.xlsx"
+batches = [
+  "data/orig/sigma/csv/FFL_2023-06-14_11_59_Sig1R_Transcriptoms_Hetero_Male_Female_rt.csv",
+  "data/orig/sigma/csv/FFL_2023-06-20_12_14_Sig1R_Transcriptoms_SigKo_WT_Male_rt.csv",
+  "data/orig/sigma/csv/FFL_2023-06-27_11_15_KO_WT_FEMALE_rt.csv",
+]
+out_dir = "data/cache/sigma/csv"
