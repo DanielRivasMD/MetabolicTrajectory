@@ -1,13 +1,8 @@
 # data
 data
 
-# graph
-graph
-
 # tmp
 tmp
-sigma
-dtw
-png
-/analysis_output
-/analysis_output_diff
+
+# cache
+cache
