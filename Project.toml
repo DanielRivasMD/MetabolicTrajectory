@@ -1,3 +1,7 @@
+name = "Serac"
+version = "0.1.0"
+authors = ["Daniel Rivas <danielrivasmd@gmail.com>"]
+
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Avicenna = "94ad6e5d-203d-4d53-856b-400d6f23acee"
