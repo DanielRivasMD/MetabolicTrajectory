@@ -14,15 +14,18 @@ export run
 
 ####################################################################################################
 
+# Performs data processing:
+#   1. Load experiments from metadata XLSX and CSV batches
+#   2. Build a unified metadata DataFrame (Animal, Sex, Genotype)
+#   3. Split time‑series data by animal
+#   4. Write meta.csv and per‑animal CSVs to `params.outdir`
+
 function run(args::Vector{String})
   s = ArgParseSettings()
   @add_arg_table! s begin
-    "--config", "-c"
-    help = "Path to TOML configuration file"
+    "--config"
+    help = "TOML configuration file"
     required = true
-    "--out-dir", "-o"
-    help = "Override default output directory"
-    default = nothing
     "--no-cache"
     help = "Disable caching"
     action = :store_true
@@ -36,15 +39,12 @@ function run(args::Vector{String})
   end
 
   flow_config = Dict{String,Any}("config_path" => config_path)
-  if parsed["out-dir"] !== nothing
-    flow_config["out_dir"] = parsed["out-dir"]
-  end
-
   cache = Cache("cache/data_processing", !parsed["no-cache"])
   result = launch(flow, flow_config; cache = cache)
 
   println("Data processing completed")
-  println("Output directory: ", result.stage_outputs["01_file_loading"]["out_dir"])
+  params = result.stage_outputs["01_load_params"]
+  println("Output directory: ", params.outdir)
   return 0
 end
 
