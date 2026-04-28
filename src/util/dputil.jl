@@ -6,13 +6,15 @@ module DPCore
 
 using Dates
 using DataFrames
-using XLSX
 using TOML
-using ..USCore: readdf, writedf
+using XLSX
+using ..USCore: readdf, readxlsx, writedf
 
 ####################################################################################################
 
 const TIME_COLS = ["Date_Time"]
+const DEFAULT_OUTMETA = "meta.csv"
+const ANIMAL_NR = Symbol("Animal_nr")
 
 ####################################################################################################
 
@@ -24,56 +26,28 @@ end
 ####################################################################################################
 
 struct DPParams
-  metadata::String
+  expmeta::String
   batches::Vector{String}
-  out_dir::String
+  outdir::String
+  outmeta::String
 end
 
 ####################################################################################################
 
-default_out_dir() = ""
-
-####################################################################################################
-
-function load_dp_params(config_path::String)
+function load_params(config_path::String)
   raw = TOML.parsefile(config_path)
+  # TODO: check that fields are present, if not error out with docs
   section = get(raw, "data_processing", raw)
-  metadata = section["metadata"]
+  expmeta = section["expmeta"]
   batches = section["batches"]
-  out_dir = get(section, "out_dir", default_out_dir())
-  return DPParams(metadata, batches, out_dir)
+  outdir = section["outdir"]
+  outmeta = get(section, "outmeta", DEFAULT_OUTMETA)
+  return DPParams(expmeta, batches, outdir, outmeta)
 end
 
 ####################################################################################################
 
-"""
-    run_dp(params::DPParams) -> Dict
-
-Performs data processing:
-  1. Load experiments from metadata XLSX and CSV batches
-  2. Build a unified metadata DataFrame (Animal, Sex, Genotype)
-  3. Split time‑series data by animal
-  4. Write meta.csv and per‑animal CSVs to `params.out_dir`
-
-Returns a dictionary with `out_dir` and `animal_count`
-"""
-function run_dp(params::DPParams)
-  mkpath(params.out_dir)
-
-  bundles = load_experiments(params)
-  meta = build_metadata(bundles)
-
-  writedf(joinpath(params.out_dir, "meta.csv"), meta; sep = ',')
-
-  dfs = split_by_animal(bundles)
-  writedf_dict(params.out_dir, dfs; sep = ',')
-
-  return Dict("out_dir" => params.out_dir, "animal_count" => length(dfs))
-end
-
-####################################################################################################
-
-function build_metadata(bundles::Dict{String,ExperimentBundle})
+function build_meta(bundles::Dict{String,ExperimentBundle})
   meta = vcat([b.metadata for b in values(bundles)]...)
   meta = select(meta, [:Animal_nr, :Sex, :Genotype])
   filter!(row -> row.Animal_nr != 0, meta)
@@ -85,13 +59,13 @@ end
 ####################################################################################################
 
 function load_experiments(params::DPParams)
-  return load_experiments(params.metadata, params.batches)
+  return load_experiments(params.expmeta, params.batches)
 end
-
-####################################################################################################
 
 function load_experiments(metadata_path::String, batches::Vector{String})
   bundles = Dict{String,ExperimentBundle}()
+
+  # TODO: add a branch to process csv files
 
   XLSX.openxlsx(metadata_path) do xf
     for sheetname in XLSX.sheetnames(xf)
@@ -137,12 +111,9 @@ end
 
 ####################################################################################################
 
-function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = Symbol(TIME_COLS[1]))
-  df = bundle.experiment
-  meta = bundle.metadata
-
+function split_by_subject(bundle::ExperimentBundle; timecol::Symbol = Symbol(TIME_COLS[1]))
   suffix_ids = Dict{Symbol,Int}()
-  for col in names(df)
+  for col in names(bundle.experiment)
     m = match(r"_(\d+)$", String(col))
     if m !== nothing
       suffix_ids[Symbol(col)] = parse(Int, m.captures[1])
@@ -154,41 +125,38 @@ function split_by_animal(bundle::ExperimentBundle; timecol::Symbol = Symbol(TIME
     push!(get!(grouped, id, Symbol[]), col)
   end
 
-  raw_ids = meta[!, :Animal_nr]
-  idmap = Dict(i => raw_ids[i] for i = 1:nrow(meta))
+  raw_ids = bundle.metadata[!, ANIMAL_NR]
+  idmap = Dict(i => raw_ids[i] for i = 1:nrow(bundle.metadata))
 
-  subdfs = Dict{Int,DataFrame}()
+  dfs = Dict{Int,DataFrame}()
   for (suffix_id, cols) in grouped
     animal_nr = idmap[suffix_id]
     if animal_nr == 0
       continue
     end
 
-    sdf = df[:, vcat([timecol], sort(cols))]
-
+    df = bundle.experiment[:, vcat([timecol], sort(cols))]
     renames = Dict(c => Symbol(replace(String(c), r"_\d+$" => "")) for c in cols)
-    rename!(sdf, renames)
+    rename!(df, renames)
     bases = sort(Symbol.(replace.(String.(cols), r"_\d+$" => "")))
-    subdfs[animal_nr] = sdf[:, vcat([timecol], bases)]
+    dfs[animal_nr] = df[:, vcat([timecol], bases)]
   end
 
-  return subdfs
+  return dfs
 end
 
-####################################################################################################
-
-function split_by_animal(
+function split_by_subject(
   bundles::Dict{String,ExperimentBundle};
   timecol = Symbol(TIME_COLS[1]),
 )
   consolidated = Dict{Int,DataFrame}()
   for bundle in values(bundles)
-    subdfs = split_by_animal(bundle; timecol = timecol)
-    for (animal_nr, sdf) in subdfs
+    dfs = split_by_subject(bundle; timecol = timecol)
+    for (animal_nr, df) in dfs
       if haskey(consolidated, animal_nr)
         @warn "Duplicate Animal_nr $animal_nr across bundles; overwriting"
       end
-      consolidated[animal_nr] = sdf
+      consolidated[animal_nr] = df
     end
   end
   return consolidated
