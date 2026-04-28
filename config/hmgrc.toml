@@ -1,5 +1,5 @@
 [data_processing]
-metadata = "data/orig/hmgcr/all_animal.csv"
+expmeta = "data/orig/hmgcr/all_animal.csv"
 batches = [
   "data/orig/hmgrc/xlsx/cohort1_2025_01_20_male.xlsx",
   "data/orig/hmgrc/xlsx/cohort1_2025_01_31_male.xlsx",
@@ -10,4 +10,4 @@ batches = [
   "data/orig/hmgrc/xlsx/cohort5_2025_05_22_male.xlsx",
   "data/orig/hmgrc/xlsx/cohort5_2025-05-29_male.xlsx",
 ]
-out_dir = "data/cache/hmgcr/csv"
+outdir = "data/cache/hmgcr/csv"
