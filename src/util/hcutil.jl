@@ -20,7 +20,7 @@ export cluster_analysis
     cluster_analysis(matrix_path, meta_path, output_dir; k=2, plot_title="") -> Dict
 
 Loads the DTW matrix and metadata, performs hierarchical clustering (Ward linkage),
-saves a dendrogram, a clustered heatmap, and a CSV with cluster assignments.
+saves a dendrogram, a clustered heatmap, and a CSV with cluster assignments
 """
 function cluster_analysis(
   matrix_path::String,

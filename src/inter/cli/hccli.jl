@@ -29,7 +29,7 @@ function run(args::Vector{String})
     "--k"
     help = "Number of clusters (default: 4)"
     arg_type = Int
-    default = 4
+    default = 2
     "--title"
     help = "Plot title"
     default = ""
@@ -47,10 +47,11 @@ function run(args::Vector{String})
     "title" => parsed["title"],
   )
 
-  cache = Cache("cache/hc", !parsed["no-cache"])
+  cache = Cache("cache/hierarchical_clustering", !parsed["no-cache"])
   result = launch(flow, config; cache = cache)
   summary = result.stage_outputs["02_cluster"]
-  println("Clustering complete. Results in: ", summary["output_dir"])
+  println("Clustering complete")
+  println("Results in: ", summary["output_dir"])
   return 0
 end
 

@@ -18,7 +18,7 @@ function run(
   matrix_path::String,
   meta_path::String;
   output_dir::String = "clustering",
-  k::Int = 4,
+  k::Int = 2,
   title::String = "",
   no_cache::Bool = false,
 )
@@ -29,7 +29,7 @@ function run(
     "k" => k,
     "title" => title,
   )
-  cache = Cache("cache/hc", !no_cache)
+  cache = Cache("cache/hierarchical_clustering", !no_cache)
   return launch(flow, config; cache = cache)
 end
 

@@ -13,25 +13,19 @@ export flow
 
 ####################################################################################################
 
-"""
-Stage 01: Load DTW matrix and metadata, returns paths and optional k.
-"""
-function load_config_stage(config::Dict, prev::Dict)
+function load_config_stage(config::Dict)
   return Dict(
     "matrix_path" => config["matrix"],
     "meta_path" => config["meta"],
     "output_dir" => config["output_dir"],
-    "k" => get(config, "k", 4),
+    "k" => get(config, "k", 2),
     "title" => get(config, "title", ""),
   )
 end
 
 ####################################################################################################
 
-"""
-Stage 02: Perform clustering and produce outputs.
-"""
-function cluster_stage(config::Dict, prev::Dict)
+function cluster_stage(prev::Dict)
   args = prev["01_load_config"]
   return HCCore.cluster_analysis(
     args["matrix_path"],
