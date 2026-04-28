@@ -4,10 +4,6 @@ root:
     - data
     - src
 
-  config:
-    children:
-      - toml
-
   data:
     children:
       - cache
