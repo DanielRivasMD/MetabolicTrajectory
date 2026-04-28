@@ -1,14 +1,16 @@
-# src/util/ssutil.jl
+####################################################################################################
+
 module SSCore
+
+####################################################################################################
 
 using DataFrames
 using Dates
 using Random
 using ..USCore: readdf, writedf
 
-# -------------------------------------------------------------------
-# Parameter struct
-# -------------------------------------------------------------------
+####################################################################################################
+
 struct SubSamplingParams
   input_dir::String
   nsamples::Int
@@ -19,9 +21,8 @@ struct SubSamplingParams
   variables::Union{Nothing,Vector{String}}
 end
 
-# -------------------------------------------------------------------
-# IO helpers
-# -------------------------------------------------------------------
+####################################################################################################
+
 function load_existing_data(input_dir::String)
   meta_path = joinpath(input_dir, "meta.csv")
   isfile(meta_path) || error("meta.csv not found in $input_dir")
@@ -38,9 +39,8 @@ function load_existing_data(input_dir::String)
   return meta, animals
 end
 
-# -------------------------------------------------------------------
-# Subsampling logic: returns list of (signal, start_idx, end_idx)
-# -------------------------------------------------------------------
+####################################################################################################
+
 function generate_subsamples(
   signal::Vector{Float64},
   nsamples::Int,
@@ -82,14 +82,12 @@ function generate_subsamples(
   return results
 end
 
-# -------------------------------------------------------------------
-# Unique ID generation: animal * 100000 + start_idx
-# -------------------------------------------------------------------
+####################################################################################################
+
 subsample_id(animal, start_idx) = animal * 100_000 + start_idx
 
-# -------------------------------------------------------------------
-# Write a single subsample as a CSV
-# -------------------------------------------------------------------
+####################################################################################################
+
 function write_subsample_csv(
   out_dir::String,
   unique_id::Int,
@@ -103,9 +101,8 @@ function write_subsample_csv(
   writedf(joinpath(out_dir, "exp_$(unique_id).csv"), df; sep = ',')
 end
 
-# -------------------------------------------------------------------
-# Main pipeline
-# -------------------------------------------------------------------
+####################################################################################################
+
 function run_subsampling(params::SubSamplingParams)
   in_dir = params.input_dir
   meta, animals = load_existing_data(in_dir)
@@ -170,9 +167,15 @@ function run_subsampling(params::SubSamplingParams)
   return Dict("output_dir" => out_dir, "n_subsamples" => nrow(new_meta))
 end
 
+####################################################################################################
+
 function load_toml_config(path::String)
   raw = TOML.parsefile(path)
-  return raw["subsampling"]   # expect [subsampling] section
+  return raw["subsampling"]
 end
 
+####################################################################################################
+
 end
+
+####################################################################################################
